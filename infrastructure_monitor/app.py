@@ -15,7 +15,7 @@ st.set_page_config(page_title="Infrastructure Damage Detection", page_icon="🏗
 def load_detector():
     # In a real scenario, this would be a custom trained model for damage detection.
     # Using yolov8n.pt will just identify general objects (cars, persons), but it proves the pipeline.
-    return DamageDetector("yolov8n.pt")
+    return DamageDetector("models/best.pt")
 
 detector = load_detector()
 report_gen = ReportGenerator()

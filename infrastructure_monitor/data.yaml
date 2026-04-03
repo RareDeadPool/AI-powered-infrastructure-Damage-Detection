@@ -1,0 +1,13 @@
+train: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\train\images
+val: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\valid\images
+test: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\test\images
+
+nc: 1
+names: ['pothole']
+
+roboflow:
+  workspace: adityas-workspace-szlvz
+  project: pothole-vhmow-oagm6
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/adityas-workspace-szlvz/pothole-vhmow-oagm6/dataset/1

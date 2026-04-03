@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+env/
+venv/
+.env
+
+# Model checkpints and logs
+*.pt
+models/
+runs/
+
+# Dataset folders
+data/
+train/
+test/
+valid/
+
+# Generated reports/outputs
+reports/
+
+# IDEs
+.idea/
+.vscode/
+*.swp

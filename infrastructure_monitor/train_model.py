@@ -11,11 +11,11 @@ def train_custom_model():
     # Ensure epochs are set to a reasonable number (e.g., 50-100) based on your dataset size
     # imgsz=640 is the standard image size for YOLOv8
     results = model.train(
-        data="data.yaml", 
+        data="data/data.yaml", 
         epochs=50, 
         imgsz=640,
         batch=16,
-        name="infrastructure_damage_model"
+        name="pipe_leak_model_v2"
     )
     
     print("✅ Training Complete!")

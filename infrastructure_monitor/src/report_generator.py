@@ -20,6 +20,7 @@ class ReportGenerator:
     def generate_pdf_report(self, detection_data, annotated_image_path, output_path):
         """Generates a structured PDF inspection report."""
         pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         pdf.set_font("Arial", 'B', 16)
         
@@ -33,6 +34,10 @@ class ReportGenerator:
         pdf.cell(190, 10, txt="1. Summary of Detections", ln=1, align='L')
         pdf.set_font("Arial", '', 12)
         
+        is_video = False
+        if len(detection_data) > 0 and "Timestamp" in detection_data[0]:
+            is_video = True
+            
         if len(detection_data) == 0:
             pdf.cell(190, 10, txt="No damage detected in this inspection.", ln=1, align='L')
         else:
@@ -40,35 +45,64 @@ class ReportGenerator:
             pdf.ln(5)
             
             # Table header
-            pdf.set_font("Arial", 'B', 10) # Smaller font to fit everything
-            pdf.cell(35, 10, txt="Damage Type", border=1, align='C')
-            pdf.cell(25, 10, txt="Confidence", border=1, align='C')
-            pdf.cell(30, 10, txt="Est. Size(cm)", border=1, align='C')
-            pdf.cell(40, 10, txt="Severity", border=1, align='C')
-            pdf.cell(60, 10, txt="Action Priority", border=1, align='C')
+            pdf.set_font("Arial", 'B', 10) 
+            if is_video:
+                pdf.cell(20, 10, txt="Time", border=1, align='C')
+                pdf.cell(30, 10, txt="Damage", border=1, align='C')
+                pdf.cell(25, 10, txt="Est (cm)", border=1, align='C')
+                pdf.cell(35, 10, txt="Severity", border=1, align='C')
+                pdf.cell(80, 10, txt="Action Priority", border=1, align='C')
+            else:
+                pdf.cell(35, 10, txt="Damage Type", border=1, align='C')
+                pdf.cell(25, 10, txt="Confidence", border=1, align='C')
+                pdf.cell(30, 10, txt="Est. Size(cm)", border=1, align='C')
+                pdf.cell(40, 10, txt="Severity", border=1, align='C')
+                pdf.cell(60, 10, txt="Action Priority", border=1, align='C')
             pdf.ln(10)
             
             pdf.set_font("Arial", '', 10)
             for item in detection_data:
-                # Need to encode emojis manually or safely strip them for PDF as FPDF core lacks unicode emoji support
                 safe_severity = item["Severity"].replace("🔴 ", "").replace("🟠 ", "").replace("🟢 ", "")
                 
-                pdf.cell(35, 10, txt=str(item["Damage Type"]), border=1, align='C')
-                pdf.cell(25, 10, txt=str(item["Confidence"]), border=1, align='C')
-                pdf.cell(30, 10, txt=str(item["Est. Length (cm)"]), border=1, align='C')
-                pdf.cell(40, 10, txt=safe_severity, border=1, align='C')
-                pdf.cell(60, 10, txt=str(item["Action Priority"]), border=1, align='C')
+                if is_video:
+                    pdf.cell(20, 10, txt=str(item["Timestamp"]), border=1, align='C')
+                    pdf.cell(30, 10, txt=str(item["Damage Type"]), border=1, align='C')
+                    pdf.cell(25, 10, txt=str(item["Est. Length (cm)"]), border=1, align='C')
+                    pdf.cell(35, 10, txt=safe_severity, border=1, align='C')
+                    pdf.cell(80, 10, txt=str(item["Action Priority"]), border=1, align='C')
+                else:
+                    pdf.cell(35, 10, txt=str(item["Damage Type"]), border=1, align='C')
+                    pdf.cell(25, 10, txt=str(item["Confidence"]), border=1, align='C')
+                    pdf.cell(30, 10, txt=str(item["Est. Length (cm)"]), border=1, align='C')
+                    pdf.cell(40, 10, txt=safe_severity, border=1, align='C')
+                    pdf.cell(60, 10, txt=str(item["Action Priority"]), border=1, align='C')
                 pdf.ln(10)
                 
         pdf.ln(10)
         
-        # Add image
-        if os.path.exists(annotated_image_path):
-            pdf.set_font("Arial", 'B', 14)
-            pdf.cell(190, 10, txt="2. Annotated Image", ln=1, align='L')
-
-            # Adjust image width to fit the page 
-            pdf.image(annotated_image_path, x=10, w=190)
+        # Add imagery
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(190, 10, txt="2. Visual Incident Log", ln=1, align='L')
+        pdf.set_font("Arial", '', 12)
+        
+        if is_video:
+            seen_images = set()
+            for item in detection_data:
+                img_path = item.get("image_path", "")
+                if img_path and img_path not in seen_images and os.path.exists(img_path):
+                    seen_images.add(img_path)
+                    
+                    # Prevent images from breaking across pages
+                    if pdf.get_y() > 180:
+                        pdf.add_page()
+                        
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(190, 10, txt=f"Damage Timestamp: {item['Timestamp']}", ln=1, align='L')
+                    pdf.image(img_path, x=20, w=150)
+                    pdf.ln(100) # Give approx vertical block space
+        else:
+            if os.path.exists(annotated_image_path):
+                pdf.image(annotated_image_path, x=10, w=190)
             
         pdf.output(output_path)
         return output_path

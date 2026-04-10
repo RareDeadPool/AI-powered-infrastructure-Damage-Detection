@@ -15,8 +15,9 @@ def train_custom_model():
         epochs=50, 
         imgsz=640,
         batch=16,
-        name="pipe_leak_model_v2"
+        name="bridge_model"
     )
+    
     
     print("✅ Training Complete!")
     print("Your trained model weights are saved at: 'runs/detect/infrastructure_damage_model/weights/best.pt'")

@@ -14,11 +14,12 @@ st.set_page_config(page_title="Infrastructure Damage Detection", page_icon="🏗
 @st.cache_resource
 def load_detector(infra_choice):
     # Determine which model weights to load based on the Dropdown selection
-    if infra_choice == "Roads & Bridges (Potholes/Cracks)":
-        # Rename your current best.pt to road_model.pt
+    if infra_choice == "Roads (Potholes)":
         model_path = "models/road_model.pt" 
     elif infra_choice == "Pipelines (Leaks)":
         model_path = "models/pipe_model.pt"
+    elif infra_choice == "Bridges (Cracks)":
+        model_path = "models/bridge_model.pt"
     else:
         model_path = "yolov8n.pt"
 
@@ -40,7 +41,7 @@ with st.sidebar:
     # NEW: Dropdown to select what AI model to use!
     infra_type = st.selectbox(
         "Infrastructure Type",
-        ["Roads & Bridges (Potholes/Cracks)", "Pipelines (Leaks)"]
+        ["Roads (Potholes)", "Pipelines (Leaks)", "Bridges (Cracks)"]
     )
     
     confidence_threshold = st.slider("Confidence Threshold", 0.0, 1.0, 0.25, 0.05)

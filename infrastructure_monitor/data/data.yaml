@@ -1,0 +1,13 @@
+train: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\train\images
+val: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\valid\images
+test: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\test\images
+
+nc: 1
+names: ['crack']
+
+roboflow:
+  workspace: projects-gzqta
+  project: leak-k2xv1
+  version: 3
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/projects-gzqta/leak-k2xv1/dataset/3

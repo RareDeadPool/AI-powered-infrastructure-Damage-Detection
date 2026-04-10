@@ -8,11 +8,7 @@ venv/
 
 
 
-# Dataset folders
-data/
-train/
-test/
-valid/
+
 
 # Generated reports/outputs
 reports/

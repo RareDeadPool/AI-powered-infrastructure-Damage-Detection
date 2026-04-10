@@ -1,0 +1,3 @@
+Damage Type,Confidence,Est. Length (cm),Severity,Action Priority,Bounding Box
+Pothole,80.1%,23.9,🟠 Medium,Schedule Maintenance,"[72.7, 82.1, 168.2, 165.5]"
+Pothole,43.2%,14.1,🟢 Low,Monitor Status,"[116.9, 61.5, 173.2, 89.9]"

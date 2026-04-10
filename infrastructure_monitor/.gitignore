@@ -6,10 +6,7 @@ env/
 venv/
 .env
 
-# Model checkpints and logs
-*.pt
-models/
-runs/
+
 
 # Dataset folders
 data/

@@ -1,3 +1,6 @@
 Damage Type,Confidence,Est. Length (cm),Severity,Action Priority,Bounding Box
-Pothole,80.1%,23.9,🟠 Medium,Schedule Maintenance,"[72.7, 82.1, 168.2, 165.5]"
-Pothole,43.2%,14.1,🟢 Low,Monitor Status,"[116.9, 61.5, 173.2, 89.9]"
+Crack,28.3%,6.0% Area,🟠 Medium,Schedule Maintenance,"[133.9, 69.4, 165.4, 164.7]"
+Crack,11.7%,3.8% Area,🟠 Medium,Schedule Maintenance,"[34.2, 58.0, 174.5, 71.6]"
+Crack,8.6%,3.2% Area,🟠 Medium,Schedule Maintenance,"[55.8, 97.5, 103.9, 130.6]"
+Crack,8.4%,6.5% Area,🟠 Medium,Schedule Maintenance,"[46.9, 57.0, 214.7, 76.4]"
+Crack,5.9%,4.0% Area,🟠 Medium,Schedule Maintenance,"[56.0, 58.1, 199.6, 72.2]"

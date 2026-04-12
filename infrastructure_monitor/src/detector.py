@@ -15,15 +15,15 @@ class DamageDetector:
         # We are processing one image at a time
         result = results[0]
         
-        # Get annotated image with native boxes but NO text labels
-        annotated_img_bgr = result.plot(labels=False)
+        # We will manually draw highlighted boxes directly on a copy of the original image
+        annotated_img_bgr = result.orig_img.copy()
         
         # Extract detection info for the report
         detections = []
         boxes = result.boxes
         class_names = result.names
         
-        for box in boxes:
+        for i, box in enumerate(boxes):
             cls_id = int(box.cls[0].item())
             class_name = class_names[cls_id]
             conf = float(box.conf[0].item())
@@ -32,17 +32,18 @@ class DamageDetector:
             # --- INTELLIGENT HEURISTICS MODULE ---
             width_px = xyxy[2] - xyxy[0]
             height_px = xyxy[3] - xyxy[1]
-            max_dim = max(width_px, height_px)
+            img_h, img_w = annotated_img_bgr.shape[:2]
             
-            # Rough estimation: assume average camera height makes 1 pixel roughly 0.25 cm
-            estimated_size_cm = round(max_dim * 0.25, 1)
+            # Robust estimation: compute relative area to handle distance
+            area_pct = round(((width_px * height_px) / (img_w * img_h)) * 100, 1)
+            estimated_size_cm = f"{area_pct}% Area"
             
             # Determine Severity and Priority Levels
-            if estimated_size_cm >= 40.0:
+            if area_pct >= 8.0:
                 severity = "🔴 High"
                 priority = "Immediate Repair"
                 color = (0, 0, 255) # Red
-            elif estimated_size_cm >= 15.0:
+            elif area_pct >= 2.0:
                 severity = "🟠 Medium"
                 priority = "Schedule Maintenance"
                 color = (0, 165, 255) # Orange
@@ -51,15 +52,60 @@ class DamageDetector:
                 priority = "Monitor Status"
                 color = (0, 255, 0) # Green
                 
-            # Draw highly customized label over the box
-            x1, y1 = int(xyxy[0]), int(xyxy[1])
-            severity_clean = severity.split(" ")[1]
-            label = f"{class_name.title()}: {severity_clean} ({estimated_size_cm}cm)"
+            # Draw highlighted translucent block exactly inside the box
+            x1, y1, x2, y2 = int(xyxy[0]), int(xyxy[1]), int(xyxy[2]), int(xyxy[3])
             
-            # Calculate text width/height for beautiful background rectangle
-            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-            cv2.rectangle(annotated_img_bgr, (x1, y1 - 25), (x1 + w, y1), color, -1)
-            cv2.putText(annotated_img_bgr, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            # --- Optional Instance Segmentation Masking ---
+            try:
+                has_real_mask = False
+                overlay = annotated_img_bgr.copy()
+                
+                if hasattr(result, 'masks') and result.masks is not None and len(result.masks.xy) > i:
+                    mask_pts = result.masks.xy[i]
+                    if len(mask_pts) > 0:
+                        mask_pts = np.int32([mask_pts])
+                        cv2.fillPoly(overlay, mask_pts, color)
+                        has_real_mask = True
+                
+                if not has_real_mask:
+                    roi = annotated_img_bgr[y1:y2, x1:x2]
+                    gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                    gray_roi = cv2.GaussianBlur(gray_roi, (5, 5), 0)
+                    
+                    _, mask = cv2.threshold(gray_roi, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+                    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    
+                    if contours:
+                        largest_contour = max(contours, key=cv2.contourArea)
+                        shifted_contour = largest_contour + np.array([[x1, y1]])
+                        cv2.drawContours(overlay, [shifted_contour], -1, color, -1)
+                    else:
+                        cv2.rectangle(overlay, (x1, y1), (x2, y2), color, -1)
+            except Exception:
+                overlay = annotated_img_bgr.copy()
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), color, -1)
+            
+            cv2.addWeighted(overlay, 0.5, annotated_img_bgr, 0.5, 0, annotated_img_bgr)
+            cv2.rectangle(annotated_img_bgr, (x1, y1), (x2, y2), color, 2)
+            
+            # Keep text perfectly inside the box and image constraints
+            severity_clean = severity.split(" ")[1]
+            label = f"{class_name.title()}: {severity_clean} ({area_pct}%)"
+            
+            font_scale = 0.6
+            thickness = 2
+            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+            
+            if w > (x2 - x1):
+                font_scale = font_scale * ((x2 - x1) / w) * 0.9
+                thickness = max(1, int(thickness * ((x2 - x1) / w)))
+                (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+            
+            # Clamp the text background rectangle so it NEVER exceeds the right or bottom edge
+            bg_x2 = min(x1 + w, img_w - 1)
+            bg_y2 = min(y1 + h + 8, img_h - 1)
+            cv2.rectangle(annotated_img_bgr, (x1, y1), (bg_x2, bg_y2), color, -1)
+            cv2.putText(annotated_img_bgr, label, (x1, min(y1 + h + 4, img_h - 5)), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness)
             
             detections.append({
                 "Damage Type": class_name.title(),
@@ -115,9 +161,9 @@ class DamageDetector:
                 if len(result.boxes) > 0 and (second_count - last_logged_second) >= cooldown_seconds:
                     last_logged_second = second_count
                     
-                    annotated_bgr = result.plot(labels=False)
+                    annotated_bgr = result.orig_img.copy()
                     
-                    for box in result.boxes:
+                    for i, box in enumerate(result.boxes):
                         cls_id = int(box.cls[0].item())
                         class_name = result.names[cls_id]
                         conf = float(box.conf[0].item())
@@ -125,13 +171,16 @@ class DamageDetector:
                         
                         width_px = xyxy[2] - xyxy[0]
                         height_px = xyxy[3] - xyxy[1]
-                        embedded_size_cm = round(max(width_px, height_px) * 0.25, 1)
+                        img_h, img_w = annotated_bgr.shape[:2]
                         
-                        if embedded_size_cm >= 40.0:
+                        area_pct = round(((width_px * height_px) / (img_w * img_h)) * 100, 1)
+                        embedded_size_cm = f"{area_pct}% Area"
+                        
+                        if area_pct >= 8.0:
                             severity = "🔴 High"
                             priority = "Immediate Repair"
                             color = (0, 0, 255)
-                        elif embedded_size_cm >= 15.0:
+                        elif area_pct >= 2.0:
                             severity = "🟠 Medium"
                             priority = "Schedule Maintenance"
                             color = (0, 165, 255)
@@ -140,14 +189,56 @@ class DamageDetector:
                             priority = "Monitor Status"
                             color = (0, 255, 0)
                             
-                        # Custom Visual Overlay
-                        x1, y1 = int(xyxy[0]), int(xyxy[1])
+                        # Custom Circular/Ellipse Overlay
+                        x1, y1, x2, y2 = int(xyxy[0]), int(xyxy[1]), int(xyxy[2]), int(xyxy[3])
                         severity_clean = severity.split(" ")[1]
-                        label = f"{class_name.title()}: {severity_clean} ({embedded_size_cm}cm)"
+                        label = f"{class_name.title()}: {severity_clean} ({area_pct}%)"
                         
-                        (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-                        cv2.rectangle(annotated_bgr, (x1, y1 - 25), (x1 + w, y1), color, -1)
-                        cv2.putText(annotated_bgr, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                        try:
+                            has_real_mask = False
+                            overlay = annotated_bgr.copy()
+                            
+                            if hasattr(result, 'masks') and result.masks is not None and len(result.masks.xy) > i:
+                                mask_pts = result.masks.xy[i]
+                                if len(mask_pts) > 0:
+                                    mask_pts = np.int32([mask_pts])
+                                    cv2.fillPoly(overlay, mask_pts, color)
+                                    has_real_mask = True
+                            
+                            if not has_real_mask:
+                                roi = annotated_bgr[y1:y2, x1:x2]
+                                gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                                gray_roi = cv2.GaussianBlur(gray_roi, (5, 5), 0)
+                                
+                                _, mask = cv2.threshold(gray_roi, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+                                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                                
+                                if contours:
+                                    largest_contour = max(contours, key=cv2.contourArea)
+                                    shifted_contour = largest_contour + np.array([[x1, y1]])
+                                    cv2.drawContours(overlay, [shifted_contour], -1, color, -1)
+                                else:
+                                    cv2.rectangle(overlay, (x1, y1), (x2, y2), color, -1)
+                        except Exception:
+                            overlay = annotated_bgr.copy()
+                            cv2.rectangle(overlay, (x1, y1), (x2, y2), color, -1)
+                            
+                        cv2.addWeighted(overlay, 0.5, annotated_bgr, 0.5, 0, annotated_bgr)
+                        cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), color, 2)
+                        
+                        font_scale = 0.6
+                        thickness = 2
+                        (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+                        
+                        if w > (x2 - x1):
+                            font_scale = font_scale * ((x2 - x1) / w) * 0.9
+                            thickness = max(1, int(thickness * ((x2 - x1) / w)))
+                            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+                        
+                        bg_x2 = min(x1 + w, img_w - 1)
+                        bg_y2 = min(y1 + h + 8, img_h - 1)
+                        cv2.rectangle(annotated_bgr, (x1, y1), (bg_x2, bg_y2), color, -1)
+                        cv2.putText(annotated_bgr, label, (x1, min(y1 + h + 4, img_h - 5)), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness)
                             
                         # Format timestamp like 00:00:15
                         mins, secs = divmod(second_count, 60)
@@ -205,11 +296,11 @@ class DamageDetector:
             results = self.model.predict(source=frame, conf=conf_threshold, verbose=False)
             result = results[0]
             
-            # Extract visual array without generic tiny labels
-            annotated_bgr = result.plot(labels=False)
+            # Manually overlay precision highlighted block
+            annotated_bgr = result.orig_img.copy()
             
             frame_detections = []
-            for box in result.boxes:
+            for i, box in enumerate(result.boxes):
                 cls_id = int(box.cls[0].item())
                 class_name = result.names[cls_id]
                 conf = float(box.conf[0].item())
@@ -217,13 +308,16 @@ class DamageDetector:
                 
                 width_px = xyxy[2] - xyxy[0]
                 height_px = xyxy[3] - xyxy[1]
-                embedded_size_cm = round(max(width_px, height_px) * 0.25, 1)
+                img_h, img_w = annotated_bgr.shape[:2]
                 
-                if embedded_size_cm >= 40.0:
+                area_pct = round(((width_px * height_px) / (img_w * img_h)) * 100, 1)
+                embedded_size_cm = f"{area_pct}% Area"
+                
+                if area_pct >= 8.0:
                     severity = "🔴 High"
                     priority = "Immediate Repair"
                     color = (0, 0, 255)
-                elif embedded_size_cm >= 15.0:
+                elif area_pct >= 2.0:
                     severity = "🟠 Medium"
                     priority = "Schedule Maintenance"
                     color = (0, 165, 255)
@@ -232,14 +326,55 @@ class DamageDetector:
                     priority = "Monitor Status"
                     color = (0, 255, 0)
                     
-                # Engineer the bounding box labels to show Severity dynamically
-                x1, y1 = int(xyxy[0]), int(xyxy[1])
+                # Highlighted precision block inside the edges
+                x1, y1, x2, y2 = int(xyxy[0]), int(xyxy[1]), int(xyxy[2]), int(xyxy[3])
                 severity_clean = severity.split(" ")[1]
-                label = f"{class_name.title()}: {severity_clean} ({embedded_size_cm}cm)"
+                label = f"{class_name.title()}: {severity_clean} ({area_pct}%)"
                 
-                (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-                cv2.rectangle(annotated_bgr, (x1, y1 - 25), (x1 + w, y1), color, -1)
-                cv2.putText(annotated_bgr, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                try:
+                    has_real_mask = False
+                    overlay = annotated_bgr.copy()
+                    
+                    if hasattr(result, 'masks') and result.masks is not None and len(result.masks.xy) > i:
+                        mask_pts = result.masks.xy[i]
+                        if len(mask_pts) > 0:
+                            mask_pts = np.int32([mask_pts])
+                            cv2.fillPoly(overlay, mask_pts, color)
+                            has_real_mask = True
+                            
+                    if not has_real_mask:
+                        roi = annotated_bgr[y1:y2, x1:x2]
+                        gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                        gray_roi = cv2.GaussianBlur(gray_roi, (5, 5), 0)
+                        
+                        _, mask = cv2.threshold(gray_roi, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+                        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                        
+                        if contours:
+                            largest_contour = max(contours, key=cv2.contourArea)
+                            shifted_contour = largest_contour + np.array([[x1, y1]])
+                            cv2.drawContours(overlay, [shifted_contour], -1, color, -1)
+                        else:
+                            cv2.rectangle(overlay, (x1, y1), (x2, y2), color, -1)
+                except Exception:
+                    overlay = annotated_bgr.copy()
+                    cv2.rectangle(overlay, (x1, y1), (x2, y2), color, -1)
+                    
+                cv2.addWeighted(overlay, 0.5, annotated_bgr, 0.5, 0, annotated_bgr)
+                cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), color, 2)
+                
+                font_scale = 0.6
+                thickness = 2
+                (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+                if w > (x2 - x1):
+                    font_scale = font_scale * ((x2 - x1) / w) * 0.9
+                    thickness = max(1, int(thickness * ((x2 - x1) / w)))
+                    (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+                
+                bg_x2 = min(x1 + w, img_w - 1)
+                bg_y2 = min(y1 + h + 8, img_h - 1)
+                cv2.rectangle(annotated_bgr, (x1, y1), (bg_x2, bg_y2), color, -1)
+                cv2.putText(annotated_bgr, label, (x1, min(y1 + h + 4, img_h - 5)), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness)
                 
                 frame_detections.append({
                     "class_name": class_name,

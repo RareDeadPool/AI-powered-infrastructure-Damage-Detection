@@ -1,8 +1,8 @@
 
-Leak - v3 2025-08-07 9:16pm
+PipeLine - v4 2025-02-25 4:15pm
 ==============================
 
-This dataset was exported via roboflow.com on August 12, 2025 at 1:38 AM GMT
+This dataset was exported via roboflow.com on February 25, 2025 at 8:20 AM GMT
 
 Roboflow is an end-to-end computer vision platform that helps you
 * collaborate with your team on computer vision projects
@@ -17,20 +17,13 @@ visit https://github.com/roboflow/notebooks
 
 To find over 100k other datasets and pre-trained models, visit https://universe.roboflow.com
 
-The dataset includes 2905 images.
-Leak are annotated in YOLOv8 format.
+The dataset includes 3443 images.
+ZGAJ are annotated in YOLOv8 format.
 
 The following pre-processing was applied to each image:
-* Auto-orientation of pixel data (with EXIF-orientation stripping)
-* Resize to 640x640 (Stretch)
 
 The following augmentation was applied to create 3 versions of each source image:
 * 50% probability of horizontal flip
 * 50% probability of vertical flip
-* Equal probability of one of the following 90-degree rotations: none, clockwise, counter-clockwise, upside-down
-* Randomly crop between 0 and 20 percent of the image
-* Random rotation of between -15 and +15 degrees
-* Random shear of between -10° to +10° horizontally and -10° to +10° vertically
-* Random brigthness adjustment of between -15 and +15 percent
 
 

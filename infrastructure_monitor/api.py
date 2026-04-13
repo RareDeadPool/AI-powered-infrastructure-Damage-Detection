@@ -17,8 +17,8 @@ app = FastAPI(title="Infrastructure Monitor Backend API", description="API endpo
 os.makedirs("data/api_uploads", exist_ok=True)
 os.makedirs("reports/api_reports", exist_ok=True)
 
-# Load the core model - adjust model_path to whichever model trained best!
-MODEL_PATH = "models/pipe_model.pt"
+# Load one unified model shared by all infrastructure classes
+MODEL_PATH = "models/final_model.pt"
 if not os.path.exists(MODEL_PATH):
     MODEL_PATH = "yolov8n.pt"
 

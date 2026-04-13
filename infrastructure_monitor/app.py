@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 from PIL import Image
-import numpy as np
 import uuid
 
 # Import our custom modules from the source directory
@@ -10,24 +9,16 @@ from src.report_generator import ReportGenerator
 
 st.set_page_config(page_title="Infrastructure Damage Detection", page_icon="🏗️", layout="wide")
 
-# Initialize models and components and cache them for performance
-@st.cache_resource
-def load_detector(infra_choice):
-    # Determine which model weights to load based on the Dropdown selection
-    if infra_choice == "Roads (Potholes)":
-        model_path = "models/road_model.pt" 
-    elif infra_choice == "Pipelines (Leaks)":
-        model_path = "models/pipe_model.pt"
-    elif infra_choice == "Bridges (Cracks)":
-        model_path = "models/bridge_model.pt"
-    else:
-        model_path = "yolov8n.pt"
+# Unified model path used across Streamlit and API
+UNIFIED_MODEL_PATH = "models/final_model.pt"
 
-    # Fallback check in case the user hasn't trained the specific model yet
-    if not os.path.exists(model_path):
-        return DamageDetector("yolov8n.pt"), False # False = using fallback
-        
-    return DamageDetector(model_path), True # True = using custom model
+
+# Initialize detector once and cache for performance
+@st.cache_resource
+def load_detector():
+    if os.path.exists(UNIFIED_MODEL_PATH):
+        return DamageDetector(UNIFIED_MODEL_PATH), True
+    return DamageDetector("yolov8n.pt"), False
 
 report_gen = ReportGenerator()
 
@@ -37,22 +28,16 @@ st.markdown("Analyze images of roads, bridges, and pipelines to identify structu
 # Sidebar for settings
 with st.sidebar:
     st.header("Settings")
-    
-    # NEW: Dropdown to select what AI model to use!
-    infra_type = st.selectbox(
-        "Infrastructure Type",
-        ["Roads (Potholes)", "Pipelines (Leaks)", "Bridges (Cracks)"]
-    )
-    
+
     confidence_threshold = st.slider("Confidence Threshold", 0.0, 1.0, 0.25, 0.05)
     st.markdown("---")
-    st.info("System uses YOLOv8 for real-time edge detection and analysis.")
+    st.info("System uses one unified YOLOv8 detection model for all infrastructure classes.")
 
-# Load the dynamic model based on the dropdown
-detector, is_custom_model = load_detector(infra_type)
+# Load one unified model for all predictions
+detector, is_custom_model = load_detector()
 
 if not is_custom_model:
-    st.sidebar.warning(f"⚠️ Custom AI Weights for '{infra_type}' not found! Place your trained .pt file in the models/ folder and rename it accordingly. (Running fallback base model in the meantime).")
+    st.sidebar.warning("⚠️ Unified weights not found at models/final_model.pt. Running fallback yolov8n.pt.")
 
 input_method = st.radio("Choose Input Method:", ["Upload Image/Video", "Live Hardware Tracking (Webcam)"], horizontal=True)
 st.markdown("---")
@@ -89,7 +74,7 @@ if input_method == "Live Hardware Tracking (Webcam)":
             st.success("Session terminated. Area clear, no incidents detected!")
 
 else:
-    uploaded_file = st.file_uploader(f"Upload an image or video of a {infra_type.split(' ')[0][:-1]}...", type=["jpg", "jpeg", "png", "mp4", "avi"])
+    uploaded_file = st.file_uploader("Upload an infrastructure image or video...", type=["jpg", "jpeg", "png", "mp4", "avi"])
 
     if uploaded_file is not None:
         

@@ -17,14 +17,14 @@ class ReportGenerator:
         df.to_csv(output_path, index=False)
         return output_path
         
-    def generate_pdf_report(self, detection_data, annotated_image_path, output_path):
+    def generate_pdf_report(self, detection_data, annotated_image_path, output_path, inspection_title="Infrastructure Inspection Report"):
         """Generates a structured PDF inspection report."""
         pdf = FPDF()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         pdf.set_font("Arial", 'B', 16)
         
-        pdf.cell(190, 10, txt="Infrastructure Inspection Report", ln=1, align='C')
+        pdf.cell(190, 10, txt=inspection_title, ln=1, align='C')
         pdf.set_font("Arial", '', 12)
         pdf.cell(190, 10, txt=f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=1, align='C')
         pdf.ln(10)

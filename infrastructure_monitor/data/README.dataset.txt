@@ -1,5 +1,5 @@
-# PipeLine > 2025-02-25 4:15pm
-https://universe.roboflow.com/addson/pipeline-fj0ri
+# Pothole Detection > 2024-09-16 12:12pm
+https://universe.roboflow.com/rajs-workspace-czva5/pothole-detection-iseby
 
 Provided by a Roboflow user
 License: CC BY 4.0

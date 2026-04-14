@@ -11,3 +11,11 @@ venv/
 .idea/
 .vscode/
 *.swp
+
+# Project specific
+venv_gpu/
+runs/
+data/
+!data/data.yaml
+*.pt
+scratch/

@@ -2,8 +2,8 @@ train: C:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\train\ima
 val: C:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\valid\images
 test: C:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\test\images
 
-nc: 2
-names: ['Burst', 'object']
+nc: 4
+names: ['pothole', 'crack', 'pipeline_leak', 'corrosion']
 
 roboflow:
   workspace: rajs-workspace-czva5

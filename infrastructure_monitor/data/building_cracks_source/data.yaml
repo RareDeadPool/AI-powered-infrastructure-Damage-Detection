@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 6
+names: ['Rebar', 'concrete spalling', 'diagonal crack', 'horizontal crack', 'multi-branched crack', 'vertical crack']
+
+roboflow:
+  workspace: haya-ehab-sabry-iggwc
+  project: cracks-rd67d
+  version: 6
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/haya-ehab-sabry-iggwc/cracks-rd67d/dataset/6

@@ -1,8 +1,10 @@
 from ultralytics import YOLO
 import cv2
+import numpy as np
 import os
 import uuid
 import time
+from src.preprocessor import VisualOptimizer
 
 
 class DamageDetector:
@@ -68,7 +70,13 @@ class DamageDetector:
 
         for box in boxes:
             cls_id = int(box.cls[0].item())
-            class_name = class_names[cls_id]
+            original_name = class_names[cls_id]
+            
+            # Collapse specific crack types into a single 'crack' label
+            if original_name in ['road_crack', 'bridge_crack', 'building_crack']:
+                class_name = 'crack'
+            else:
+                class_name = original_name
             conf = float(box.conf[0].item())
             xyxy = box.xyxy[0].tolist()
 
@@ -95,18 +103,29 @@ class DamageDetector:
 
         return detections
 
-    def predict_image(self, image_source, conf_threshold=0.25):
+    def predict_image(self, image_source, conf_threshold=0.25, use_enhancement=False):
         """Run YOLO on a single image and return annotated image + structured detections."""
-        results = self.model.predict(source=image_source, conf=conf_threshold, verbose=False)
+        
+        # Convert PIL to BGR if needed
+        if not isinstance(image_source, np.ndarray):
+            image_bgr = cv2.cvtColor(np.array(image_source), cv2.COLOR_RGB2BGR)
+        else:
+            image_bgr = image_source.copy()
+
+        # Apply AI Preprocessing for better picture quality
+        if use_enhancement:
+            image_bgr = VisualOptimizer.enhance_image(image_bgr)
+
+        results = self.model.predict(source=image_bgr, conf=conf_threshold, verbose=False)
         result = results[0]
 
         annotated_img_bgr = result.orig_img.copy()
         detections = self._process_boxes(result, annotated_img_bgr)
 
         annotated_img_rgb = cv2.cvtColor(annotated_img_bgr, cv2.COLOR_BGR2RGB)
-        return annotated_img_rgb, detections
+        return annotated_img_rgb, detections, image_bgr
 
-    def predict_video(self, video_path, conf_threshold=0.25):
+    def predict_video(self, video_path, conf_threshold=0.25, use_enhancement=False):
         """Process video and extract key incident frames using detection-only logic."""
         frame_dir = os.path.join("data", "video_frames")
         os.makedirs(frame_dir, exist_ok=True)
@@ -132,6 +151,11 @@ class DamageDetector:
 
             if frame_count % frame_skip == 0:
                 second_count += 1
+                
+                # Preprocess frame
+                if use_enhancement:
+                    frame = VisualOptimizer.enhance_image(frame)
+                    
                 results = self.model.predict(source=frame, conf=conf_threshold, verbose=False)
                 result = results[0]
 
@@ -161,7 +185,7 @@ class DamageDetector:
         cap.release()
         return key_frames, all_detections
 
-    def predict_livestream(self, conf_threshold=0.25):
+    def predict_livestream(self, conf_threshold=0.25, use_enhancement=False):
         """Run real-time webcam inference using detection-only bounding box rendering."""
         frame_dir = os.path.join("data", "video_frames")
         os.makedirs(frame_dir, exist_ok=True)
@@ -178,6 +202,9 @@ class DamageDetector:
             ret, frame = cap.read()
             if not ret:
                 break
+
+            if use_enhancement:
+                frame = VisualOptimizer.enhance_image(frame)
 
             results = self.model.predict(source=frame, conf=conf_threshold, verbose=False)
             result = results[0]

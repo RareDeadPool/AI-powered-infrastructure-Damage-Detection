@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import cv2
 from PIL import Image
 import uuid
 
@@ -30,6 +31,7 @@ with st.sidebar:
     st.header("Settings")
 
     confidence_threshold = st.slider("Confidence Threshold", 0.0, 1.0, 0.25, 0.05)
+    use_enhancement = st.checkbox("✨ AI Image Optimization", value=True, help="Enhances brightness, contrast, and sharpness for better detection in low-light or blurry conditions.")
     st.markdown("---")
     st.info("System uses one unified YOLOv8 detection model for all infrastructure classes.")
 
@@ -53,7 +55,7 @@ if input_method == "Live Hardware Tracking (Webcam)":
     
     if st.button("▶️ Launch Hardware Tracker"):
         with st.spinner("Tracking Engine Live. Look at the pop-up window..."):
-            key_frames, detections = detector.predict_livestream(confidence_threshold)
+            key_frames, detections = detector.predict_livestream(confidence_threshold, use_enhancement=use_enhancement)
             
         st.markdown("---")
         st.subheader("Tracking Session Results")
@@ -81,14 +83,19 @@ else:
         # ======== IMAGE PROCESSING ========
         if uploaded_file.type.startswith("image"):
             col1, col2 = st.columns(2)
+            image = Image.open(uploaded_file).convert("RGB")
             
-            with col1:
-                st.subheader("Original Image")
-                image = Image.open(uploaded_file).convert("RGB")
-                st.image(image, use_container_width=True)
-                
             with st.spinner("Analyzing image for damages..."):
-                annotated_img_rgb, detections = detector.predict_image(image, confidence_threshold)
+                annotated_img_rgb, detections, enhanced_bgr = detector.predict_image(image, confidence_threshold, use_enhancement=use_enhancement)
+                
+            with col1:
+                if use_enhancement:
+                    st.subheader("Optimized Image (AI Enhanced)")
+                    enhanced_rgb = cv2.cvtColor(enhanced_bgr, cv2.COLOR_BGR2RGB)
+                    st.image(enhanced_rgb, use_container_width=True)
+                else:
+                    st.subheader("Original Image")
+                    st.image(image, use_container_width=True)
                 
             with col2:
                 st.subheader("Detections")
@@ -116,7 +123,7 @@ else:
                 f.write(uploaded_file.getbuffer())
                 
             with st.spinner("Scanning video stream..."):
-                key_frames, detections = detector.predict_video(temp_video_path, confidence_threshold)
+                key_frames, detections = detector.predict_video(temp_video_path, confidence_threshold, use_enhancement=use_enhancement)
                 
             st.markdown("---")
             st.subheader("Video Analysis Results")

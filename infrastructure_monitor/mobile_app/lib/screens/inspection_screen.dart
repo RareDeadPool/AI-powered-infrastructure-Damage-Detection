@@ -35,6 +35,13 @@ class _InspectionScreenState extends State<InspectionScreen> {
     }
   }
 
+  Future<void> _pickFromGallery() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      _runEdgeInference(File(image.path));
+    }
+  }
+
   Future<void> _runEdgeInference(File file) async {
     setState(() {
       _isAnalyzing = true;
@@ -80,16 +87,36 @@ class _InspectionScreenState extends State<InspectionScreen> {
               Text("Location: ${widget.location}", style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
               const SizedBox(height: 15),
               
-              ElevatedButton.icon(
-                onPressed: _isAnalyzing ? null : _captureImage,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text("Scan Damage via Camera", style: TextStyle(fontSize: 18)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              Row(
+                children: [
+                   Expanded(
+                     child: ElevatedButton.icon(
+                      onPressed: _isAnalyzing ? null : _captureImage,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text("Camera", style: TextStyle(fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                   ),
+                   const SizedBox(width: 12),
+                   Expanded(
+                     child: ElevatedButton.icon(
+                      onPressed: _isAnalyzing ? null : _pickFromGallery,
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text("Gallery", style: TextStyle(fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                   ),
+                ],
               ),
               
               const SizedBox(height: 30),
@@ -108,15 +135,39 @@ class _InspectionScreenState extends State<InspectionScreen> {
                 const Text("Offline Analysis Result:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 
-                // Displays the raw local image securely
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    _imageFile!,
-                    fit: BoxFit.contain,
-                    height: 300,
-                  ),
+                // --- ROBUST BOUNDING BOX OVERLAY START ---
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        // The raw captured image
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            _imageFile!,
+                            fit: BoxFit.contain,
+                            height: 300,
+                            width: constraints.maxWidth,
+                          ),
+                        ),
+                        
+                        // Transparent canvas for drawing boxes
+                        // We use a SizedBox of 300px height to match the image container
+                        SizedBox(
+                          height: 300,
+                          width: constraints.maxWidth,
+                          child: CustomPaint(
+                            painter: DetectionPainter(
+                              detections: _detections,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
                 ),
+                // --- ROBUST BOUNDING BOX OVERLAY END ---
+
                 const SizedBox(height: 20),
                 
                 const Text("Detected Incidents:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -157,4 +208,77 @@ class _InspectionScreenState extends State<InspectionScreen> {
       ),
     );
   }
+}
+
+class DetectionPainter extends CustomPainter {
+  final List<dynamic> detections;
+
+  DetectionPainter({required this.detections});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
+
+    for (var detection in detections) {
+      final List<dynamic> box = detection['Bounding Box'];
+      final String severity = detection['Severity'];
+      final String labelText = "${detection['Damage Type']} ${detection['Confidence']}";
+
+      if (severity.contains("High")) {
+        paint.color = AppColors.severityHigh;
+      } else if (severity.contains("Medium")) {
+        paint.color = AppColors.severityMedium;
+      } else {
+        paint.color = AppColors.severityLow;
+      }
+
+      // Calculate Rect
+      final rect = Rect.fromLTRB(
+        box[0] * size.width,
+        box[1] * size.height,
+        box[2] * size.width,
+        box[3] * size.height,
+      );
+
+      // 1. Draw Bounding Box
+      canvas.drawRect(rect, paint);
+
+      // 2. Draw Label Background
+      final labelBackgroundPaint = Paint()
+        ..color = paint.color.withOpacity(0.8)
+        ..style = PaintingStyle.fill;
+      
+      textPainter.text = TextSpan(
+        text: labelText,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+      textPainter.layout();
+
+      canvas.drawRect(
+        Rect.fromLTWH(
+          rect.left,
+          rect.top - textPainter.height - 4,
+          textPainter.width + 8,
+          textPainter.height + 4,
+        ),
+        labelBackgroundPaint,
+      );
+
+      // 3. Draw Label Text
+      textPainter.paint(canvas, Offset(rect.left + 4, rect.top - textPainter.height - 2));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant DetectionPainter oldDelegate) => true;
 }

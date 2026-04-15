@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../utils/constants.dart';
 import 'inspection_screen.dart';
+import 'photo_batch_screen.dart';
 
 class ProjectSetupScreen extends StatefulWidget {
   const ProjectSetupScreen({super.key});
@@ -29,6 +30,25 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => InspectionScreen(
+          projectTitle: _titleController.text,
+          location: _locationController.text,
+        ),
+      ),
+    );
+  }
+
+  void _startBatchMode() {
+    if (_titleController.text.isEmpty || _locationController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter all details!'), backgroundColor: AppColors.severityHigh)
+      );
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PhotoBatchScreen(
           projectTitle: _titleController.text,
           location: _locationController.text,
         ),
@@ -132,15 +152,48 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
               ),
             ),
             const Spacer(),
-            
-            ElevatedButton(
+
+            // ── Mode 1: Live Edge Scanner ────────────────────────────────
+            ElevatedButton.icon(
               onPressed: _startInspection,
+              icon: const Icon(Icons.videocam, color: Colors.white),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 20),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text("LAUNCH EDGE SCANNER", style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
-            )
+              label: const Column(
+                children: [
+                  Text("LAUNCH LIVE SCANNER",
+                      style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text("Real-time camera detection",
+                      style: TextStyle(fontSize: 11, color: Colors.white70)),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // ── Mode 2: Photo Batch Report ───────────────────────────────
+            ElevatedButton.icon(
+              onPressed: _startBatchMode,
+              icon: const Icon(Icons.photo_library, color: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              label: const Column(
+                children: [
+                  Text("PHOTO BATCH REPORT",
+                      style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text("Analyse multiple saved photos",
+                      style: TextStyle(fontSize: 11, color: Colors.white70)),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
           ],
         ),
       ),

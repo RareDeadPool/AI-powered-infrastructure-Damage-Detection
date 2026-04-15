@@ -14,6 +14,7 @@ class HomeDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< HEAD
     return Scaffold(
       backgroundColor: const Color(0xFFFAFBFC),
       body: SafeArea(
@@ -63,6 +64,48 @@ class HomeDashboardPage extends StatelessWidget {
                   ),
                 ]),
               ),
+=======
+    return SafeArea(
+      bottom: false,
+      child: CustomScrollView(
+        slivers: [
+          const SliverToBoxAdapter(child: HeaderWidget()),
+          const SliverToBoxAdapter(child: VitalityCard()),
+          const SliverToBoxAdapter(child: SectionTitle(label: 'SPECIALIZED ANALYSIS', title: 'Detection Modules')),
+          
+          // Hardcoded Module Cards (UI Concept)
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const ModuleCard(
+                  title: 'Pothole Detection',
+                  description: 'Computer vision mapping for urban road maintenance.',
+                  iconData: Icons.add_road,
+                  iconColor: Color(0xFFF38020),
+                  iconBgColor: Color(0xFFFFF2EA),
+                  imagePath: 'assets/pothole_detection.png',
+                ),
+                const SizedBox(height: 20),
+                const ModuleCard(
+                  title: 'Pipeline Monitoring',
+                  description: 'Real-time pressure and structural integrity tracking.',
+                  iconData: Icons.water_drop,
+                  iconColor: Color(0xFF4ED39A),
+                  iconBgColor: Color(0xFFE5FBEE),
+                  imagePath: 'assets/pipeline_monitoring.png',
+                ),
+                const SizedBox(height: 20),
+                const ModuleCard(
+                  title: 'Crack Analysis',
+                  description: 'Precision measurement of concrete and steel fatigue.',
+                  iconData: Icons.precision_manufacturing,
+                  iconColor: Color(0xFF558AFA),
+                  iconBgColor: Color(0xFFEFF3FF),
+                  imagePath: 'assets/crack_analysis.png',
+                ),
+              ]),
+>>>>>>> 4fc285463d412009cdbf061c2d4c943fa7fe500a
             ),
 
             const SliverToBoxAdapter(
@@ -159,6 +202,7 @@ class HeaderWidget extends StatelessWidget {
         children: [
           Row(
             children: [
+<<<<<<< HEAD
               Container(
                 width: 36,
                 height: 36,
@@ -169,6 +213,10 @@ class HeaderWidget extends StatelessWidget {
                 child: const Icon(Icons.offline_bolt_rounded, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 10),
+=======
+              Image.asset('assets/cityscan_logo.png', height: 32),
+              const SizedBox(width: 8),
+>>>>>>> 4fc285463d412009cdbf061c2d4c943fa7fe500a
               RichText(
                 text: TextSpan(
                   style: GoogleFonts.outfit(
@@ -396,6 +444,11 @@ class ModuleCard extends StatelessWidget {
               width: double.infinity,
               height: 160,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 140,
+                color: Colors.grey.shade100,
+                child: const Icon(Icons.image_not_supported, color: Colors.grey),
+              ),
             ),
           ),
         ],

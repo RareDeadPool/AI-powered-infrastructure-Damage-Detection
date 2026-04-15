@@ -1,14 +1,25 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 import '../utils/constants.dart';
+import '../models/detection_model.dart';
+import '../repositories/project_repository.dart';
 import '../services/yolo_vision_service.dart';
 
 class InspectionScreen extends StatefulWidget {
+  final String projectId;
   final String projectTitle;
   final String location;
+  final File? initialImage;
 
-  const InspectionScreen({super.key, required this.projectTitle, required this.location});
+  const InspectionScreen({
+    super.key, 
+    required this.projectId,
+    required this.projectTitle, 
+    required this.location,
+    this.initialImage,
+  });
 
   @override
   State<InspectionScreen> createState() => _InspectionScreenState();
@@ -26,6 +37,13 @@ class _InspectionScreenState extends State<InspectionScreen> {
     super.initState();
     // Pre-loads the neural network into phone memory
     YoloVisionService.initializeModel();
+    
+    // Auto-start analysis if an image was passed from Quick Detect
+    if (widget.initialImage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _runEdgeInference(widget.initialImage!);
+      });
+    }
   }
   
   Future<void> _captureImage() async {
@@ -53,6 +71,21 @@ class _InspectionScreenState extends State<InspectionScreen> {
       // Passes the photo physically to the internal phone processor!
       final results = await YoloVisionService.analyzeImageLocally(file);
       
+      // SAVE RESULTS TO HIVE
+      for (var result in results) {
+        final detection = Detection(
+          id: const Uuid().v4(),
+          projectId: widget.projectId,
+          imagePath: file.path,
+          damageType: result['Damage Type'] ?? 'Unknown',
+          severity: result['Severity'] ?? 'Low',
+          confidence: double.tryParse(result['Confidence']?.replaceAll('%', '') ?? '0') ?? 0.0,
+          timestamp: DateTime.now(),
+        );
+        
+        await ProjectRepository.saveDetection(detection);
+      }
+
       setState(() {
         _detections = results;
         _isAnalyzing = false;
@@ -60,7 +93,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
     } catch (e) {
       setState(() { _isAnalyzing = false; });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.severityHigh)
+        SnackBar(content: Text("Error: $e"), backgroundColor: AppColors.severityHigh)
       );
     }
   }
@@ -87,37 +120,39 @@ class _InspectionScreenState extends State<InspectionScreen> {
               Text("Location: ${widget.location}", style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
               const SizedBox(height: 15),
               
-              Row(
-                children: [
-                   Expanded(
-                     child: ElevatedButton.icon(
-                      onPressed: _isAnalyzing ? null : _captureImage,
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text("Camera", style: TextStyle(fontSize: 16)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              // Hide buttons if this is a Quick Scan result to avoid redundancy
+              if (!widget.projectId.startsWith('quick_scan'))
+                Row(
+                  children: [
+                     Expanded(
+                       child: ElevatedButton.icon(
+                        onPressed: _isAnalyzing ? null : _captureImage,
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text("Camera", style: TextStyle(fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
-                    ),
-                   ),
-                   const SizedBox(width: 12),
-                   Expanded(
-                     child: ElevatedButton.icon(
-                      onPressed: _isAnalyzing ? null : _pickFromGallery,
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text("Gallery", style: TextStyle(fontSize: 16)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.secondary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                     ),
+                     const SizedBox(width: 12),
+                     Expanded(
+                       child: ElevatedButton.icon(
+                        onPressed: _isAnalyzing ? null : _pickFromGallery,
+                        icon: const Icon(Icons.photo_library),
+                        label: const Text("Gallery", style: TextStyle(fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.secondary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
-                    ),
-                   ),
-                ],
-              ),
+                     ),
+                  ],
+                ),
               
               const SizedBox(height: 30),
               

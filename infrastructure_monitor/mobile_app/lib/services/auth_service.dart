@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'firebase_service.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -51,7 +53,7 @@ class AuthService {
     required String password,
     required String fullName,
     required String phone,
-    required String governmentId,
+    required XFile governmentIdImage,
   }) async {
     try {
       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
@@ -62,16 +64,27 @@ class AuthService {
       final user = userCredential.user;
       
       if (user != null) {
-        // Update Firebase profile name
+        // 1. Upload Government ID Image to Storage (with 30-second timeout)
+        final String? govIdUrl = await FirebaseService.uploadImage(
+          'user_ids/${user.uid}', 
+          governmentIdImage.path,
+        ).timeout(const Duration(seconds: 30), onTimeout: () {
+          print('Sign up: Image upload timed out');
+          return null;
+        });
+        
+        // 2. Update Firebase profile name
         await user.updateDisplayName(fullName);
         
-        // Save additional details to Firestore
+        // 3. Save additional details to Firestore
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'uid': user.uid,
           'fullName': fullName,
           'email': email,
           'phone': phone,
-          'governmentId': governmentId,
+          'governmentIdUrl': govIdUrl,
           'createdAt': FieldValue.serverTimestamp(),
+          'isApproved': false, // Verification pending
         });
       }
 

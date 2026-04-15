@@ -58,6 +58,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '700781686455',
     projectId: 'cityscan-8aed3',
     storageBucket: 'cityscan-8aed3.firebasestorage.app',
+    databaseURL: 'https://cityscan-8aed3-default-rtdb.asia-southeast1.firebasedatabase.app/',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -88,5 +89,6 @@ class DefaultFirebaseOptions {
     authDomain: 'cityscan-8aed3.firebaseapp.com',
     storageBucket: 'cityscan-8aed3.firebasestorage.app',
     measurementId: 'G-24NME72CTZ',
+    databaseURL: 'https://cityscan-8aed3-default-rtdb.asia-southeast1.firebasedatabase.app/',
   );
 }

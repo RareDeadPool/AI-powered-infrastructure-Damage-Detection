@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:geolocator/geolocator.dart';
 import '../utils/constants.dart';
+import '../utils/location_helper.dart';
 import '../services/detector_service.dart';
 import '../services/report_service.dart';
 import '../models/recognition.dart';
@@ -34,6 +36,10 @@ class _InspectionScreenState extends State<InspectionScreen> {
   List<Recognition> _savedDetections = [];
   String? _capturedImagePath;
   bool _isLive = true;
+  
+  // Geo-tagging data for the capture
+  double? _captureLat;
+  double? _captureLng;
 
   DateTime? _lastInferenceTime;
 
@@ -94,21 +100,36 @@ class _InspectionScreenState extends State<InspectionScreen> {
   Future<void> _captureDetection() async {
     if (_cameraController == null) return;
     try {
-      // Take a picture before pausing preview
+      // 1. Fetch Geo-coordinates precisely for this click
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.best,
+            timeLimit: const Duration(seconds: 3));
+      } catch (e) {
+        debugPrint("Location capture failed: $e");
+      }
+
+      // 2. Take a picture before pausing preview
       final image = await _cameraController!.takePicture();
       await _cameraController!.pausePreview();
+      
       setState(() {
         _isLive = false;
         _capturedImagePath = image.path;
         _savedDetections = List.from(_detections);
+        _captureLat = position?.latitude;
+        _captureLng = position?.longitude;
       });
 
       // Show feedback
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Damage Detection Captured!"),
+        SnackBar(
+          content: Text(position != null 
+            ? "Damage Captured at ${LocationHelper.formatToCardinal(position.latitude, position.longitude)}"
+            : "Damage Detection Captured!"),
           backgroundColor: AppColors.secondary,
-          duration: Duration(seconds: 1),
+          duration: const Duration(seconds: 2),
         )
       );
     } catch (e) {
@@ -123,6 +144,8 @@ class _InspectionScreenState extends State<InspectionScreen> {
       setState(() {
         _isLive = true;
         _detections = [];
+        _captureLat = null;
+        _captureLng = null;
       });
     } catch (e) {
       print("Error resuming preview: $e");
@@ -194,19 +217,6 @@ class _InspectionScreenState extends State<InspectionScreen> {
                           ),
                         ),
 
-                        // Scope Overlay
-                        if (_isLive)
-                          Center(
-                            child: Container(
-                              width: previewSize * 0.7,
-                              height: previewSize * 0.7,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                          ),
-
                         // Mode Tag
                         Positioned(
                           top: 15,
@@ -223,6 +233,30 @@ class _InspectionScreenState extends State<InspectionScreen> {
                             ),
                           ),
                         ),
+                        
+                        // GPS Badge
+                        if (!_isLive && _captureLat != null)
+                          Positioned(
+                            bottom: 15,
+                            left: 15,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.gps_fixed, color: Colors.white, size: 12),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    LocationHelper.formatToCardinal(_captureLat!, _captureLng!),
+                                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -258,6 +292,8 @@ class _InspectionScreenState extends State<InspectionScreen> {
                                 location: widget.location,
                                 detections: _savedDetections,
                                 imagePath: _capturedImagePath!,
+                                lat: _captureLat,
+                                lng: _captureLng,
                               );
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(

@@ -8,6 +8,7 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../models/recognition.dart';
 import '../screens/photo_batch_screen.dart';
+import '../utils/location_helper.dart';
 
 class ReportService {
   /// Draws bounding boxes and labels onto the raw image bytes using dart:ui
@@ -105,6 +106,8 @@ class ReportService {
     required String location,
     required List<Recognition> detections,
     required String imagePath,
+    double? lat,
+    double? lng,
   }) async {
     final date = DateFormat('yyyy-MM-dd  HH:mm').format(DateTime.now());
 
@@ -168,6 +171,13 @@ class ReportService {
                     pw.Text(location),
                   ]),
                   pw.SizedBox(height: 4),
+                  if (lat != null && lng != null) ...[
+                    pw.Row(children: [
+                      pw.Text('GPS Coordinates: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                      pw.Text(LocationHelper.formatToCardinal(lat, lng), style: const pw.TextStyle(fontSize: 10, color: PdfColors.blue700)),
+                    ]),
+                    pw.SizedBox(height: 4),
+                  ],
                   pw.Row(children: [
                     pw.Text('Detections: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                     pw.Text('${detections.length} damage type(s) found'),
@@ -382,6 +392,21 @@ class ReportService {
                 ),
 
                 pw.SizedBox(height: 10),
+
+                // Geo-Tag (North, East, West, South format)
+                if (pr.lat != null && pr.lng != null)
+                  pw.Container(
+                    margin: const pw.EdgeInsets.only(bottom: 8),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColors.blueGrey50,
+                      borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
+                    ),
+                    child: pw.Row(children: [
+                      pw.Text('GPS Coordinates: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                      pw.Text(LocationHelper.formatToCardinal(pr.lat!, pr.lng!), style: const pw.TextStyle(fontSize: 10, color: PdfColors.blue900)),
+                    ]),
+                  ),
 
                 // Annotated image
                 pw.Center(

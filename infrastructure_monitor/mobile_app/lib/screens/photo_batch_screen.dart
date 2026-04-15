@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
 import '../utils/constants.dart';
+import '../utils/location_helper.dart';
 import '../services/detector_service.dart';
 import '../services/report_service.dart';
 import '../models/recognition.dart';
@@ -10,11 +12,15 @@ import '../models/recognition.dart';
 class PhotoResult {
   final String imagePath;
   final List<Recognition> detections;
+  final double? lat;
+  final double? lng;
   String note;
 
   PhotoResult({
     required this.imagePath,
     required this.detections,
+    this.lat,
+    this.lng,
     this.note = '',
   });
 }
@@ -91,22 +97,38 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
     setState(() => _isCapturing = true);
 
     try {
+      // 1. Grab current detections
       final currentDetections = List<Recognition>.from(_liveDetections);
+      
+      // 2. Fetch Geo-coordinates precisely for this click
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+          timeLimit: const Duration(seconds: 3),
+        );
+      } catch (e) {
+        debugPrint("Location capture failed: $e");
+      }
+
+      // 3. Take the actual photo
       final xFile = await _cam!.takePicture();
 
       setState(() {
         _captures.add(PhotoResult(
           imagePath: xFile.path,
           detections: currentDetections,
+          lat: position?.latitude,
+          lng: position?.longitude,
         ));
         _isCapturing = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
-          currentDetections.isEmpty
-              ? 'Frame captured — no damage found.'
-              : 'Detection saved: ${currentDetections.length} anomaly types identified.',
+          position != null 
+            ? 'Geo-tagged capture saved (${LocationHelper.formatToCardinal(position.latitude, position.longitude)})'
+            : 'Frame captured without GPS data.',
         ),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 1),
@@ -145,14 +167,14 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
           children: [
             _row(Icons.engineering_rounded, 'Project', widget.projectTitle),
             const SizedBox(height: 8),
-            _row(Icons.location_on_rounded, 'Location', widget.location),
+            _row(Icons.location_on_rounded, 'Main Region', widget.location),
             const SizedBox(height: 8),
             _row(Icons.camera_alt_rounded, 'Total Captures', '${_captures.length}'),
             const SizedBox(height: 8),
             _row(Icons.warning_amber_rounded, 'Total Anomalies', '$totalDmg detected'),
             const SizedBox(height: 16),
             Text(
-              'A batch PDF will be generated containing all annotated frames and detailed detection logs.',
+              'A batch PDF will be generated containing all cardinal coordinates, annotated frames, and detection logs.',
               style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF6E7C91), height: 1.4),
             ),
           ],
@@ -207,8 +229,8 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
             Text(widget.projectTitle,
                 style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
                 overflow: TextOverflow.ellipsis),
-            Text('Project-Based Batch Scanning',
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.white60)),
+            Text('Geo-Tagging Active',
+                style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF4ED39A), fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -252,7 +274,7 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
                   Positioned(
                     top: 16, right: 16,
                     child: _badge(
-                      _isCapturing ? '📷 SAVING...' : '● AI SCANNING LIVE',
+                      _isCapturing ? '📷 GEO-TAGGING...' : '● LIVE SCANNING',
                       _isCapturing ? const Color(0xFFF38020) : Colors.redAccent,
                     ),
                   ),
@@ -281,7 +303,7 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
                             ],
                           ),
                           child: Icon(
-                            _isCapturing ? Icons.hourglass_empty_rounded : Icons.camera_rounded,
+                            _isCapturing ? Icons.gps_fixed : Icons.camera_rounded,
                             color: const Color(0xFF2D5096),
                             size: 35,
                           ),
@@ -309,7 +331,7 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
                         const Icon(Icons.add_photo_alternate_outlined, size: 48, color: Color(0xFFCBD5E0)),
                         const SizedBox(height: 12),
                         Text(
-                          'Scan infrastructure and capture frames.\nEach detection will be added to the report.',
+                          'Scan infrastructure and capture frames.\nCardinal coordinates will be saved for every click.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7), fontSize: 13, height: 1.5),
                         ),
@@ -392,7 +414,7 @@ class _FrameTile extends StatefulWidget {
 class _FrameTileState extends State<_FrameTile> {
   Color _color(double score) {
     if (score > 0.7) return AppColors.severityHigh;
-    if (score > 4.0) return AppColors.severityMedium;
+    if (score > 0.4) return AppColors.severityMedium;
     return AppColors.severityLow;
   }
 
@@ -427,6 +449,21 @@ class _FrameTileState extends State<_FrameTile> {
             borderRadius: BorderRadius.circular(20),
             child: Image.file(File(r.imagePath), height: 180, width: double.infinity, fit: BoxFit.cover),
           ),
+          const SizedBox(height: 12),
+          
+          // Show Cardinal Coordinates in Detail View
+          if (r.lat != null && r.lng != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(color: const Color(0xFFEEF4FF), borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                const Icon(Icons.gps_fixed, size: 16, color: Color(0xFF2D5096)),
+                const SizedBox(width: 10),
+                Text(LocationHelper.formatToCardinal(r.lat!, r.lng!), 
+                     style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF2D5096))),
+              ]),
+            ),
+          
           const SizedBox(height: 20),
           Text('AI ANALYSIS RESULTS', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFF38020), letterSpacing: 1)),
           const SizedBox(height: 12),

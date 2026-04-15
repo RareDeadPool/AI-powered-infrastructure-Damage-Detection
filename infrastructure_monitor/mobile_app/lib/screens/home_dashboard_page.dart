@@ -33,7 +33,7 @@ class HomeDashboardPage extends StatelessWidget {
                   iconData: Icons.add_road,
                   iconColor: Color(0xFFF38020),
                   iconBgColor: Color(0xFFFFF2EA),
-                  imageNetworkPath: 'https://plus.unsplash.com/premium_photo-1661915903264-a740889255a8?q=80&w=600&auto=format&fit=crop',
+                  imagePath: 'assets/pothole_detection.png',
                 ),
                 const SizedBox(height: 20),
                 const ModuleCard(
@@ -42,7 +42,16 @@ class HomeDashboardPage extends StatelessWidget {
                   iconData: Icons.water_drop,
                   iconColor: Color(0xFF4ED39A),
                   iconBgColor: Color(0xFFE5FBEE),
-                  imageNetworkPath: 'https://images.unsplash.com/photo-1542013936693-884638332954?q=80&w=600&auto=format&fit=crop',
+                  imagePath: 'assets/pipeline_monitoring.png',
+                ),
+                const SizedBox(height: 20),
+                const ModuleCard(
+                  title: 'Crack Analysis',
+                  description: 'Precision measurement of concrete and steel fatigue.',
+                  iconData: Icons.precision_manufacturing,
+                  iconColor: Color(0xFF558AFA),
+                  iconBgColor: Color(0xFFEFF3FF),
+                  imagePath: 'assets/crack_analysis.png',
                 ),
               ]),
             ),
@@ -123,13 +132,7 @@ class HeaderWidget extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Logo placeholder
-              Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(color: Color(0xFFF38020), shape: BoxShape.circle),
-                child: const Icon(Icons.flash_on, color: Colors.white, size: 18),
-              ),
+              Image.asset('assets/cityscan_logo.png', height: 32),
               const SizedBox(width: 8),
               RichText(
                 text: TextSpan(
@@ -290,7 +293,7 @@ class ModuleCard extends StatelessWidget {
   final IconData iconData;
   final Color iconColor;
   final Color iconBgColor;
-  final String imageNetworkPath;
+  final String imagePath;
 
   const ModuleCard({
     super.key,
@@ -299,7 +302,7 @@ class ModuleCard extends StatelessWidget {
     required this.iconData,
     required this.iconColor,
     required this.iconBgColor,
-    required this.imageNetworkPath,
+    required this.imagePath,
   });
 
   @override
@@ -335,11 +338,16 @@ class ModuleCard extends StatelessWidget {
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Image.network(
-              imageNetworkPath,
+            child: Image.asset(
+              imagePath,
               width: double.infinity,
               height: 140,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 140,
+                color: Colors.grey.shade100,
+                child: const Icon(Icons.image_not_supported, color: Colors.grey),
+              ),
             ),
           ),
         ],

@@ -38,6 +38,7 @@ dependencies:
   uuid: ^4.5.1
   path: ^1.9.1
   google_fonts: ^8.0.2
+  crypto: ^3.0.6
 
 dependency_overrides:
   # Pin path_provider_foundation to a version that does NOT use
@@ -57,3 +58,36 @@ flutter:
 
   assets:
     - assets/models/final_model.tflite
+    - assets/cityscan_logo.png
+    - assets/pothole_detection.png
+    - assets/pipeline_monitoring.png
+    - assets/crack_analysis.png
+<<<<<<< HEAD
+=======
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package
+>>>>>>> 4fc285463d412009cdbf061c2d4c943fa7fe500a

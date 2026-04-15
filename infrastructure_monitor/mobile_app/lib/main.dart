@@ -73,7 +73,7 @@ class InfraMonitorApp extends StatelessWidget {
             return const SplashScreen();
           }
           
-          // If user is authenticated, go to Main Screen, else go to Login
+          // If user is authenticated, go to dashboard
           if (snapshot.hasData) {
             return const MainScreen();
           }

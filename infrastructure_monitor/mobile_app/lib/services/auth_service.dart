@@ -64,28 +64,36 @@ class AuthService {
       final user = userCredential.user;
       
       if (user != null) {
-        // 1. Upload Government ID Image to Storage (with 30-second timeout)
-        final String? govIdUrl = await FirebaseService.uploadImage(
-          'user_ids/${user.uid}', 
-          governmentIdImage.path,
-        ).timeout(const Duration(seconds: 30), onTimeout: () {
-          print('Sign up: Image upload timed out');
-          return null;
-        });
-        
-        // 2. Update Firebase profile name
-        await user.updateDisplayName(fullName);
-        
-        // 3. Save additional details to Firestore
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'uid': user.uid,
-          'fullName': fullName,
-          'email': email,
-          'phone': phone,
-          'governmentIdUrl': govIdUrl,
-          'createdAt': FieldValue.serverTimestamp(),
-          'isApproved': false, // Verification pending
-        });
+        try {
+          // 1. Upload Government ID Image to Cloudinary (using FirebaseService bridge)
+          final String? govIdUrl = await FirebaseService.uploadImage(
+            'user_ids/${user.uid}', 
+            governmentIdImage.path,
+          ).timeout(const Duration(seconds: 30), onTimeout: () {
+            print('Sign up: Image upload timed out');
+            return null;
+          });
+          
+          // 2. Update Firebase profile name
+          await user.updateDisplayName(fullName);
+          
+          // 3. Save additional details to Firestore
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'uid': user.uid,
+            'fullName': fullName,
+            'email': email,
+            'phone': phone,
+            'governmentIdUrl': govIdUrl,
+            'createdAt': FieldValue.serverTimestamp(),
+            'isApproved': false, // Verification pending
+          });
+        } catch (e) {
+          // IMPORTANT: If any step fails (like Firestore permissions),
+          // delete the account so the user can try again after fixing the issue.
+          print('Sign up process failed after auth: $e. Rolling back account.');
+          await user.delete();
+          rethrow;
+        }
       }
 
       return user;

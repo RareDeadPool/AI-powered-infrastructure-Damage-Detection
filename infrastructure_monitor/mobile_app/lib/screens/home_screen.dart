@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 
 void main() {
   runApp(const CityScanApp());
@@ -342,10 +344,22 @@ class HeaderWidget extends StatelessWidget {
             children: [
               const Icon(Icons.dashboard_customize_outlined, color: Color(0xFF7B8EA7)),
               const SizedBox(width: 16),
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.grey.shade300,
-                child: const Icon(Icons.person, color: Colors.white),
+              GestureDetector(
+                onTap: () async {
+                  await AuthService.signOut();
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                },
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.grey.shade300,
+                  child: const Icon(Icons.logout, color: Colors.white, size: 20),
+                ),
               ),
             ],
           )

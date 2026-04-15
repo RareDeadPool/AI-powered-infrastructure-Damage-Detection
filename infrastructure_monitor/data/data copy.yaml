@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['crack']
+
+roboflow:
+  workspace: arhv
+  project: building-cracks-segm-v2
+  version: 2
+  license: MIT
+  url: https://universe.roboflow.com/arhv/building-cracks-segm-v2/dataset/2

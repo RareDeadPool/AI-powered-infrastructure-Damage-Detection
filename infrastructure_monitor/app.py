@@ -20,6 +20,8 @@ def load_detector(infra_choice):
         model_path = "models/pipe_model.pt"
     elif infra_choice == "Bridges (Cracks)":
         model_path = "models/bridge_model.pt"
+    elif infra_choice == "Buildings (Cracks)":
+        model_path = "models/building_model.pt"
     else:
         model_path = "yolov8n.pt"
 
@@ -41,7 +43,7 @@ with st.sidebar:
     # NEW: Dropdown to select what AI model to use!
     infra_type = st.selectbox(
         "Infrastructure Type",
-        ["Roads (Potholes)", "Pipelines (Leaks)", "Bridges (Cracks)"]
+        ["Roads (Potholes)", "Pipelines (Leaks)", "Bridges (Cracks)", "Buildings (Cracks)"]
     )
     
     confidence_threshold = st.slider("Confidence Threshold", 0.0, 1.0, 0.25, 0.05)

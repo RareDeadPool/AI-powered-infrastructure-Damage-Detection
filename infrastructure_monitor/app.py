@@ -10,16 +10,26 @@ from src.report_generator import ReportGenerator
 
 st.set_page_config(page_title="Infrastructure Damage Detection", page_icon="🏗️", layout="wide")
 
-# Unified model path used across Streamlit and API
-UNIFIED_MODEL_PATH = "models/final_model.pt"
-
-
-# Initialize detector once and cache for performance
+# Initialize models and components and cache them for performance
 @st.cache_resource
-def load_detector():
-    if os.path.exists(UNIFIED_MODEL_PATH):
-        return DamageDetector(UNIFIED_MODEL_PATH), True
+def load_detector(infra_choice):
+    # Determine which model weights to load based on the Dropdown selection
+    if infra_choice == "Roads (Potholes)":
+        model_path = "models/road_model.pt" 
+    elif infra_choice == "Pipelines (Leaks)":
+        model_path = "models/pipe_model.pt"
+    elif infra_choice == "Bridges (Cracks)":
+        model_path = "models/bridge_model.pt"
+    elif infra_choice == "Buildings (Cracks)":
+        model_path = "models/building_model.pt"
+    else:
+        model_path = "yolov8n.pt"
+    
+    if os.path.exists(model_path):
+        return DamageDetector(model_path), True
     return DamageDetector("yolov8n.pt"), False
+
+report_gen = ReportGenerator()
 
 report_gen = ReportGenerator()
 
@@ -29,17 +39,22 @@ st.markdown("Analyze images of roads, bridges, and pipelines to identify structu
 # Sidebar for settings
 with st.sidebar:
     st.header("Settings")
-
+    # Dropdown to select what AI model to use
+    infra_type = st.selectbox(
+        "Infrastructure Type",
+        ["Roads (Potholes)", "Pipelines (Leaks)", "Bridges (Cracks)", "Buildings (Cracks)"]
+    )
+    
     confidence_threshold = st.slider("Confidence Threshold", 0.0, 1.0, 0.25, 0.05)
     use_enhancement = st.checkbox("✨ AI Image Optimization", value=True, help="Enhances brightness, contrast, and sharpness for better detection in low-light or blurry conditions.")
     st.markdown("---")
-    st.info("System uses one unified YOLOv8 detection model for all infrastructure classes.")
+    st.info("System uses YOLOv8 for real-time edge detection and analysis.")
 
-# Load one unified model for all predictions
-detector, is_custom_model = load_detector()
+# Load model based on selection
+detector, is_custom_model = load_detector(infra_type)
 
 if not is_custom_model:
-    st.sidebar.warning("⚠️ Unified weights not found at models/final_model.pt. Running fallback yolov8n.pt.")
+    st.sidebar.warning(f"⚠️ Custom weights for {infra_type} not found. Running fallback yolov8n.pt.")
 
 input_method = st.radio("Choose Input Method:", ["Upload Image/Video", "Live Hardware Tracking (Webcam)"], horizontal=True)
 st.markdown("---")

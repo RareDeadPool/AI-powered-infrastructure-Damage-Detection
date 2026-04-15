@@ -1,13 +1,6 @@
-train: C:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\train\images
-val: C:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\valid\images
-test: C:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\data\test\images
+train: data/train/images
+val: data/valid/images
+test: data/test/images
 
 nc: 4
 names: ['pothole', 'crack', 'pipeline_leak', 'corrosion']
-
-roboflow:
-  workspace: rajs-workspace-czva5
-  project: pothole-detection-iseby
-  version: 4
-  license: CC BY 4.0
-  url: https://universe.roboflow.com/rajs-workspace-czva5/pothole-detection-iseby/dataset/4

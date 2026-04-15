@@ -68,7 +68,7 @@ class _QuickDetectScreenState extends State<QuickDetectScreen> {
                   borderRadius: BorderRadius.circular(32),
                   color: Colors.black,
                   image: const DecorationImage(
-                    image: NetworkImage('https://images.unsplash.com/photo-1542013936693-884638332954?q=80&w=600&auto=format&fit=crop'),
+                    image: const AssetImage('assets/pothole_detection.png'),
                     fit: BoxFit.cover,
                     opacity: 0.6,
                   ),

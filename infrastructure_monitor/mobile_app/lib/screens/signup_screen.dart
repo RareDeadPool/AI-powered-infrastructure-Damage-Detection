@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
+import '../services/email_validation_service.dart';
 import '../utils/constants.dart';
-import 'main_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -54,21 +54,36 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => _isLoading = true);
     try {
+      // Check if email actually exists (SMTP mailbox verification)
+      final isValid = await EmailValidationService.isEmailValid(
+        _emailController.text.trim(),
+      );
+
+      if (!isValid) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This email address does not exist or cannot receive mail. Please use a real email.'),
+            backgroundColor: AppColors.severityHigh,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+
       final user = await AuthService.signUpWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
         fullName: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
-        governmentIdImage: _govIdImage!, // I will update AuthService to handle XFile
+        governmentIdImage: _govIdImage!,
       );
 
       if (user != null) {
         if (!mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-          (route) => false,
-        );
+        // The StreamBuilder in main.dart will automatically catch the new user
+        // and navigate to MainScreen. Pop back to root so it takes over.
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       if (!mounted) return;
@@ -127,7 +142,16 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: _buildInputDecoration('Email Address', Icons.email_outlined),
-                  validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Enter your email';
+                    // User requested backend-only verification (link-based), 
+                    // so we allow any valid email format here.
+                    const emailRegex = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
+                    if (!RegExp(emailRegex).hasMatch(v)) {
+                      return 'Enter a valid email address';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 

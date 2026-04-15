@@ -41,7 +41,7 @@ class HomeDashboardPage extends StatelessWidget {
                     iconData: Icons.add_road,
                     iconColor: Color(0xFFF38020),
                     iconBgColor: Color(0xFFFFF2EA),
-                    imageNetworkPath: 'https://images.unsplash.com/photo-1515162816999-a0ca47016f31?q=80&w=600&auto=format&fit=crop',
+                    imagePath: 'assets/pothole_detection.png',
                   ),
                   const SizedBox(height: 20),
                   const ModuleCard(
@@ -50,7 +50,7 @@ class HomeDashboardPage extends StatelessWidget {
                     iconData: Icons.water_drop,
                     iconColor: Color(0xFF4ED39A),
                     iconBgColor: Color(0xFFE5FBEE),
-                    imageNetworkPath: 'https://images.unsplash.com/photo-1581094120910-1375ba730cf1?q=80&w=600&auto=format&fit=crop',
+                    imagePath: 'assets/pipeline_monitoring.png',
                   ),
                   const SizedBox(height: 20),
                   const ModuleCard(
@@ -59,7 +59,7 @@ class HomeDashboardPage extends StatelessWidget {
                     iconData: Icons.precision_manufacturing,
                     iconColor: Color(0xFF558AFA),
                     iconBgColor: Color(0xFFEFF3FF),
-                    imageNetworkPath: 'https://images.unsplash.com/photo-1545147986-a9d6f210df77?q=80&w=600&auto=format&fit=crop',
+                    imagePath: 'assets/crack_analysis.png',
                   ),
                 ]),
               ),
@@ -335,7 +335,7 @@ class ModuleCard extends StatelessWidget {
   final IconData iconData;
   final Color iconColor;
   final Color iconBgColor;
-  final String imageNetworkPath;
+  final String imagePath;
 
   const ModuleCard({
     super.key,
@@ -344,7 +344,7 @@ class ModuleCard extends StatelessWidget {
     required this.iconData,
     required this.iconColor,
     required this.iconBgColor,
-    required this.imageNetworkPath,
+    required this.imagePath,
   });
 
   @override
@@ -391,8 +391,8 @@ class ModuleCard extends StatelessWidget {
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Image.network(
-              imageNetworkPath,
+            child: Image.asset(
+              imagePath,
               width: double.infinity,
               height: 160,
               fit: BoxFit.cover,

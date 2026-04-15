@@ -38,6 +38,7 @@ dependencies:
   uuid: ^4.5.1
   path: ^1.9.1
   google_fonts: ^8.0.2
+  crypto: ^3.0.6
 
 dependency_overrides:
   # Pin path_provider_foundation to a version that does NOT use
@@ -57,3 +58,7 @@ flutter:
 
   assets:
     - assets/models/final_model.tflite
+    - assets/cityscan_logo.png
+    - assets/pothole_detection.png
+    - assets/pipeline_monitoring.png
+    - assets/crack_analysis.png

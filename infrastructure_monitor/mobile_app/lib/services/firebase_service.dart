@@ -1,33 +1,15 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:path/path.dart' as p;
+import 'cloudinary_service.dart';
 import '../models/project_model.dart';
 import '../models/detection_model.dart';
 
 class FirebaseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Upload an image to Firebase Storage and get the download URL
-  static Future<String?> uploadImage(String detectionId, String filePath) async {
-    try {
-      File file = File(filePath);
-      if (!await file.exists()) {
-        print('File does not exist: $filePath');
-        return null;
-      }
-      
-      final fileName = p.basename(filePath);
-      final storageRef = _storage.ref().child('detections/$detectionId/$fileName');
-      
-      final uploadTask = await storageRef.putFile(file);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-      return downloadUrl;
-    } catch (e) {
-      print('Error uploading image: $e');
-      return null;
-    }
+  // Upload an image to Cloudinary (replacing Firebase Storage)
+  static Future<String?> uploadImage(String folder, String filePath) async {
+    return await CloudinaryService.uploadImage(filePath, folder: folder);
   }
 
   // Save Project to Firestore

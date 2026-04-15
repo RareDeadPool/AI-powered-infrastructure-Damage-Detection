@@ -6,6 +6,7 @@ import 'services/auth_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'utils/constants.dart';
 
 void main() async {
@@ -55,6 +56,7 @@ class InfraMonitorApp extends StatelessWidget {
       theme: ThemeData(
         primaryColor: AppColors.primary,
         scaffoldBackgroundColor: AppColors.background,
+        textTheme: GoogleFonts.outfitTextTheme(Theme.of(context).textTheme),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.textLight,

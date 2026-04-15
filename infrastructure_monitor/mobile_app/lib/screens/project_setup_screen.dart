@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:uuid/uuid.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../utils/constants.dart';
-import '../models/project_model.dart';
-import '../repositories/project_repository.dart';
-import '../services/auth_service.dart';
 import 'inspection_screen.dart';
 import 'photo_batch_screen.dart';
 
@@ -22,62 +20,38 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
   
   bool _isFetchingLocation = false;
 
-  Future<void> _startInspection() async {
+  void _startInspection() {
     final title = _titleController.text.trim();
     final location = _locationController.text.trim();
 
     if (title.isEmpty || location.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter all details!'), backgroundColor: AppColors.severityHigh)
+        const SnackBar(content: Text('Please enter all details!'), behavior: SnackBarBehavior.floating, backgroundColor: AppColors.severityHigh)
       );
       return;
     }
 
-    setState(() => _isFetchingLocation = true); // Using this as simple loading state
+    final String projectId = const Uuid().v4();
 
-    try {
-      final String projectId = const Uuid().v4();
-      final String? userId = AuthService.currentUser?.uid;
-
-      if (userId == null) throw Exception("User not authenticated");
-
-      // SAVE TO HIVE
-      final newProject = Project(
-        id: projectId,
-        name: title,
-        createdAt: DateTime.now(),
-        userId: userId,
-        isSynced: false,
-      );
-      
-      await ProjectRepository.saveProject(newProject);
-
-      if (!mounted) return;
-      
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => InspectionScreen(
-            projectId: projectId,
-            projectTitle: title,
-            location: location,
-          ),
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InspectionScreen(
+          projectId: projectId,
+          projectTitle: title,
+          location: location,
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saving project: $e"), backgroundColor: AppColors.severityHigh)
-      );
-    } finally {
-      if (mounted) setState(() => _isFetchingLocation = false);
-    }
+      ),
+    );
   }
 
   void _startBatchMode() {
-    if (_titleController.text.isEmpty || _locationController.text.isEmpty) {
+    final title = _titleController.text.trim();
+    final location = _locationController.text.trim();
+
+    if (title.isEmpty || location.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter all details!'), backgroundColor: AppColors.severityHigh)
+        const SnackBar(content: Text('Please enter all details!'), behavior: SnackBarBehavior.floating, backgroundColor: AppColors.severityHigh)
       );
       return;
     }
@@ -86,8 +60,8 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => PhotoBatchScreen(
-          projectTitle: _titleController.text,
-          location: _locationController.text,
+          projectTitle: title,
+          location: location,
         ),
       ),
     );
@@ -116,19 +90,16 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
         throw Exception('Location permissions are permanently denied.');
       }
 
-      // Fetch precise hardware GPS coordinates
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high
+        desiredAccuracy: LocationAccuracy.best
       );
 
-      // Translate coordinates into a physical street name
       List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
-        
-        // Example Output: "Subhash Road, Mumbai, 400030"
         String address = "${place.street ?? ''}, ${place.locality ?? place.subLocality ?? ''}".trim();
-        if (address.endsWith(',')) address = address.substring(0, address.length - 1); // Cleanup trailing comma
+        if (address.startsWith(',')) address = address.substring(1).trim();
+        if (address.endsWith(',')) address = address.substring(0, address.length - 1);
         
         setState(() {
           _locationController.text = address;
@@ -136,7 +107,7 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.severityMedium)
+        SnackBar(content: Text(e.toString()), behavior: SnackBarBehavior.floating, backgroundColor: AppColors.severityMedium)
       );
     } finally {
       setState(() {
@@ -148,89 +119,172 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("New Inspection")),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
+      backgroundColor: const Color(0xFFFAFBFC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: const Color(0xFF1D2B40),
+        title: Text("Project Setup", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.architecture, size: 80, color: AppColors.primary),
-            const SizedBox(height: 30),
-            
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: "Project Title",
-                hintText: "e.g., Highway Section B Review",
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.engineering),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 10))
+                ],
               ),
+              child: Column(
+                children: [
+                  const Icon(Icons.architecture_rounded, size: 64, color: Color(0xFF2D5096)),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Define your inspection goals. Named projects help organize AI detection history and PDF reports.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(color: const Color(0xFF6E7C91), fontSize: 13, height: 1.5),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            Text("General Information", style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40), letterSpacing: 0.5)),
+            const SizedBox(height: 16),
+
+            _buildField(
+              controller: _titleController,
+              label: "Project Title",
+              hint: "e.g., Highway Section B Review",
+              icon: Icons.engineering_rounded,
             ),
             const SizedBox(height: 20),
             
-            TextField(
+            _buildField(
               controller: _locationController,
-              decoration: InputDecoration(
-                labelText: "Geographic Location",
-                hintText: "e.g., Subhash Road",
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.map),
-                // Adds our Auto GPS button physically inside the text box!
-                suffixIcon: _isFetchingLocation
-                    ? const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.secondary),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.my_location, color: AppColors.primary),
-                        onPressed: _fetchAutoLocation,
-                        tooltip: "Get Current GPS Location",
-                      ),
-              ),
+              label: "Geographic Location",
+              hint: "e.g., Subhash Road, Mumbai",
+              icon: Icons.location_on_rounded,
+              suffix: _isFetchingLocation
+                  ? const Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF38020))),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.my_location_rounded, color: Color(0xFFF38020)),
+                      onPressed: _fetchAutoLocation,
+                    ),
             ),
-            const Spacer(),
+            
+            const SizedBox(height: 40),
+            
+            Text("Select Inspection Type", style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40), letterSpacing: 0.5)),
+            const SizedBox(height: 16),
 
-            // ── Mode 1: Live Edge Scanner ────────────────────────────────
-            ElevatedButton.icon(
-              onPressed: _startInspection,
-              icon: const Icon(Icons.videocam, color: Colors.white),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            _buildModeCard(
+              title: "Project-Based Batch Inspection",
+              subtitle: "Live scanning where damages are added into a single report one by one.",
+              icon: Icons.collections_rounded,
+              color: const Color(0xFF2D5096),
+              onTap: _startBatchMode,
+              isPremium: true,
+            ),
+            
+            const SizedBox(height: 16),
+
+            _buildModeCard(
+              title: "Rapid Edge Scanner",
+              subtitle: "Real-time AI detection in a single high-speed session.",
+              icon: Icons.videocam_rounded,
+              color: const Color(0xFFF38020),
+              onTap: _startInspection,
+            ),
+            
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField({required TextEditingController controller, required String label, required String hint, required IconData icon, Widget? suffix}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF7B8EA7))),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.outfit(color: const Color(0xFFCBD5E0), fontWeight: FontWeight.normal),
+            prefixIcon: Icon(icon, color: const Color(0xFF2D5096), size: 20),
+            suffixIcon: suffix,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade100)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade100)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2D5096))),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeCard({required String title, required String subtitle, required IconData icon, required Color color, required VoidCallback onTap, bool isPremium = false}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: isPremium ? Border.all(color: color.withOpacity(0.3), width: 1.5) : null,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-              label: const Column(
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("LAUNCH LIVE SCANNER",
-                      style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
-                  Text("Real-time camera detection",
-                      style: TextStyle(fontSize: 11, color: Colors.white70)),
+                   Row(
+                     children: [
+                       Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                       if (isPremium) ...[
+                         const SizedBox(width: 8),
+                         Container(
+                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                           decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+                           child: const Text("BATCH", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                         )
+                       ]
+                     ],
+                   ),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7), fontSize: 12, height: 1.4)),
                 ],
               ),
             ),
-
-            const SizedBox(height: 14),
-
-            // ── Mode 2: Photo Batch Report ───────────────────────────────
-            ElevatedButton.icon(
-              onPressed: _startBatchMode,
-              icon: const Icon(Icons.photo_library, color: Colors.white),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              label: const Column(
-                children: [
-                  Text("PHOTO BATCH REPORT",
-                      style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
-                  Text("Analyse multiple saved photos",
-                      style: TextStyle(fontSize: 11, color: Colors.white70)),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFCBD5E0), size: 16),
           ],
         ),
       ),

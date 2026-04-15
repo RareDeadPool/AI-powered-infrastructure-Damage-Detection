@@ -15,6 +15,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     // Simulate loading AI modules for 3 seconds then navigate to dashboard
     Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
       // Routes directly to the Dashboard
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardScreen()));
     });

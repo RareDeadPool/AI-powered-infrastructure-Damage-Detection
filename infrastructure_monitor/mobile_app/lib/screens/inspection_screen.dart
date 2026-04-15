@@ -13,9 +13,9 @@ class InspectionScreen extends StatefulWidget {
   final File? initialImage;
 
   const InspectionScreen({
-    super.key, 
+    super.key,
     required this.projectId,
-    required this.projectTitle, 
+    required this.projectTitle,
     required this.location,
     this.initialImage,
   });
@@ -29,42 +29,23 @@ class _InspectionScreenState extends State<InspectionScreen> {
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
   bool _isAnalyzing = false;
-  
+
   List<Recognition> _detections = [];
   List<Recognition> _savedDetections = [];
   String? _capturedImagePath;
   bool _isLive = true;
 
+  DateTime? _lastInferenceTime;
+
   @override
   void initState() {
     super.initState();
-<<<<<<< HEAD
     _initializeCamera();
-=======
-    // Pre-loads the neural network into phone memory
-    YoloVisionService.initializeModel();
-    
-    // Auto-start analysis if an image was passed from Quick Detect
-    if (widget.initialImage != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _runEdgeInference(widget.initialImage!);
-      });
-    }
   }
-  
-  Future<void> _captureImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
-      _runEdgeInference(File(image.path));
-    }
->>>>>>> origin/krish
-  }
-
-  DateTime? _lastInferenceTime;
 
   Future<void> _initializeCamera() async {
     await _detectorService.init();
-    
+
     final cameras = await availableCameras();
     if (cameras.isEmpty) return;
 
@@ -77,48 +58,24 @@ class _InspectionScreenState extends State<InspectionScreen> {
 
     try {
       await _cameraController!.initialize();
-      
-<<<<<<< HEAD
+
       // Start Image Stream for Live Inference
       _cameraController!.startImageStream((CameraImage image) {
         if (_isLive && !_isAnalyzing) {
           final now = DateTime.now();
-          if (_lastInferenceTime == null || 
+          if (_lastInferenceTime == null ||
               now.difference(_lastInferenceTime!).inMilliseconds > 80) {
             _lastInferenceTime = now;
             _runLiveInference(image);
           }
         }
       });
-=======
-      // SAVE RESULTS TO HIVE
-      for (var result in results) {
-        final detection = Detection(
-          id: const Uuid().v4(),
-          projectId: widget.projectId,
-          imagePath: file.path,
-          damageType: result['Damage Type'] ?? 'Unknown',
-          severity: result['Severity'] ?? 'Low',
-          confidence: double.tryParse(result['Confidence']?.replaceAll('%', '') ?? '0') ?? 0.0,
-          timestamp: DateTime.now(),
-        );
-        
-        await ProjectRepository.saveDetection(detection);
-      }
->>>>>>> origin/krish
 
       setState(() {
         _isCameraInitialized = true;
       });
     } catch (e) {
-<<<<<<< HEAD
       print("Camera Error: $e");
-=======
-      setState(() { _isAnalyzing = false; });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e"), backgroundColor: AppColors.severityHigh)
-      );
->>>>>>> origin/krish
     }
   }
 
@@ -126,7 +83,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
     _isAnalyzing = true;
     final results = await _detectorService.predictCameraFrame(image);
     _isAnalyzing = false;
-    
+
     if (mounted && _isLive) {
       setState(() {
         _detections = results;
@@ -145,7 +102,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
         _capturedImagePath = image.path;
         _savedDetections = List.from(_detections);
       });
-      
+
       // Show feedback
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -200,7 +157,6 @@ class _InspectionScreenState extends State<InspectionScreen> {
           final previewSize = constraints.maxWidth - 40;
           return Column(
             children: [
-<<<<<<< HEAD
               // 1. Professional Square Viewport
               Padding(
                 padding: const EdgeInsets.all(20.0),
@@ -217,65 +173,6 @@ class _InspectionScreenState extends State<InspectionScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
                     child: Stack(
-=======
-              Text("Location: ${widget.location}", style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
-              const SizedBox(height: 15),
-              
-              // Hide buttons if this is a Quick Scan result to avoid redundancy
-              if (!widget.projectId.startsWith('quick_scan'))
-                Row(
-                  children: [
-                     Expanded(
-                       child: ElevatedButton.icon(
-                        onPressed: _isAnalyzing ? null : _captureImage,
-                        icon: const Icon(Icons.camera_alt),
-                        label: const Text("Camera", style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                     ),
-                     const SizedBox(width: 12),
-                     Expanded(
-                       child: ElevatedButton.icon(
-                        onPressed: _isAnalyzing ? null : _pickFromGallery,
-                        icon: const Icon(Icons.photo_library),
-                        label: const Text("Gallery", style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                     ),
-                  ],
-                ),
-              
-              const SizedBox(height: 30),
-              
-              if (_isAnalyzing)
-                const Column(
-                  children: [
-                    CircularProgressIndicator(color: AppColors.secondary),
-                    SizedBox(height: 15),
-                    Text("NPU Processor is scanning image offline...", 
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))
-                  ],
-                ),
-                
-              if (_imageFile != null && !_isAnalyzing) ...[
-                const Text("Offline Analysis Result:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                
-                // --- ROBUST BOUNDING BOX OVERLAY START ---
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Stack(
->>>>>>> origin/krish
                       children: [
                         if (_isCameraInitialized)
                           OverflowBox(
@@ -485,8 +382,8 @@ class DetectionPainter extends CustomPainter {
       );
 
       // Color mapping
-      paint.color = rec.score > 0.7 
-          ? AppColors.severityHigh 
+      paint.color = rec.score > 0.7
+          ? AppColors.severityHigh
           : (rec.score > 0.4 ? AppColors.severityMedium : AppColors.secondary);
 
       // 1. Draw Bounding Box with subtle rounded corners
@@ -506,7 +403,7 @@ class DetectionPainter extends CustomPainter {
         textPainter.width + 10,
         textPainter.height + 6,
       );
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(bgRect, const Radius.circular(4)),
         Paint()..color = paint.color,

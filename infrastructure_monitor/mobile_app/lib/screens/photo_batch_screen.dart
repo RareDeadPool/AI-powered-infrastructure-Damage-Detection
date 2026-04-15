@@ -1,14 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../utils/constants.dart';
 import '../services/detector_service.dart';
 import '../services/report_service.dart';
 import '../models/recognition.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Data model – one captured frame with its detections + optional note
-// ─────────────────────────────────────────────────────────────────────────────
 class PhotoResult {
   final String imagePath;
   final List<Recognition> detections;
@@ -21,9 +19,6 @@ class PhotoResult {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Screen
-// ─────────────────────────────────────────────────────────────────────────────
 class PhotoBatchScreen extends StatefulWidget {
   final String projectTitle;
   final String location;
@@ -43,15 +38,13 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
   CameraController? _cam;
   bool _cameraReady = false;
 
-  // Live inference state
   bool _isAnalysing = false;
   List<Recognition> _liveDetections = [];
   DateTime? _lastInferenceTime;
 
-  // Captured batch
   final List<PhotoResult> _captures = [];
-  bool _isCapturing = false;   // busy capturing a still frame
-  bool _isGenerating = false;  // busy building the PDF
+  bool _isCapturing = false;
+  bool _isGenerating = false;
 
   @override
   void initState() {
@@ -65,14 +58,12 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
     super.dispose();
   }
 
-  // ── Camera ────────────────────────────────────────────────────────────────
-
   Future<void> _initCamera() async {
     await _detector.init();
     final cameras = await availableCameras();
     if (cameras.isEmpty) return;
 
-    _cam = CameraController(cameras[0], ResolutionPreset.medium,
+    _cam = CameraController(cameras[0], ResolutionPreset.high,
         enableAudio: false, imageFormatGroup: ImageFormatGroup.yuv420);
 
     await _cam!.initialize();
@@ -85,7 +76,7 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
     if (_isCapturing) return;
     final now = DateTime.now();
     if (_lastInferenceTime != null &&
-        now.difference(_lastInferenceTime!).inMilliseconds < 100) return;
+        now.difference(_lastInferenceTime!).inMilliseconds < 120) return;
     _lastInferenceTime = now;
     if (_isAnalysing) return;
     _isAnalysing = true;
@@ -95,14 +86,11 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
     });
   }
 
-  // ── Capture a frame ───────────────────────────────────────────────────────
-
   Future<void> _captureFrame() async {
     if (_cam == null || _isCapturing || _isGenerating) return;
     setState(() => _isCapturing = true);
 
     try {
-      // Snapshot with current live detections (copy before anything changes)
       final currentDetections = List<Recognition>.from(_liveDetections);
       final xFile = await _cam!.takePicture();
 
@@ -117,11 +105,10 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
           currentDetections.isEmpty
-              ? 'Frame captured — no damage detected.'
-              : 'Captured! ${currentDetections.length} detection(s) saved.',
+              ? 'Frame captured — no damage found.'
+              : 'Detection saved: ${currentDetections.length} anomaly types identified.',
         ),
-        backgroundColor:
-            currentDetections.isEmpty ? Colors.green : AppColors.secondary,
+        behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 1),
       ));
     } catch (e) {
@@ -133,12 +120,10 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
     setState(() => _captures.removeAt(index));
   }
 
-  // ── Confirm + generate PDF ────────────────────────────────────────────────
-
   Future<void> _confirmAndGenerate() async {
     if (_captures.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Capture at least one frame first.'),
+          content: Text('Add at least one capture to generate a report.'),
           backgroundColor: AppColors.severityHigh));
       return;
     }
@@ -148,43 +133,43 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(children: [
-          Icon(Icons.picture_as_pdf, color: AppColors.primary),
-          SizedBox(width: 10),
-          Text('Generate Batch Report?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(children: [
+          const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF2D5096)),
+          const SizedBox(width: 12),
+          Text('Batch Report Export', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _row(Icons.engineering, 'Project', widget.projectTitle),
-            const SizedBox(height: 6),
-            _row(Icons.location_on, 'Location', widget.location),
-            const SizedBox(height: 6),
-            _row(Icons.camera, 'Frames captured', '${_captures.length}'),
-            const SizedBox(height: 6),
-            _row(Icons.warning_amber, 'Total damages', '$totalDmg detected'),
-            const SizedBox(height: 14),
-            const Text(
-              'Each captured frame will appear as an annotated section in the PDF with its detection table.',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
+            _row(Icons.engineering_rounded, 'Project', widget.projectTitle),
+            const SizedBox(height: 8),
+            _row(Icons.location_on_rounded, 'Location', widget.location),
+            const SizedBox(height: 8),
+            _row(Icons.camera_alt_rounded, 'Total Captures', '${_captures.length}'),
+            const SizedBox(height: 8),
+            _row(Icons.warning_amber_rounded, 'Total Anomalies', '$totalDmg detected'),
+            const SizedBox(height: 16),
+            Text(
+              'A batch PDF will be generated containing all annotated frames and detailed detection logs.',
+              style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF6E7C91), height: 1.4),
             ),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.check, size: 18),
-            label: const Text('Export PDF'),
+              child: Text('Keep Editing', style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7)))),
+          ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: const Color(0xFF2D5096),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Generate PDF', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -201,14 +186,12 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Report failed: $e'),
+          SnackBar(content: Text('Generation failed: $e'),
               backgroundColor: AppColors.severityHigh));
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
   }
-
-  // ── UI ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -217,177 +200,151 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
+        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.projectTitle,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
                 overflow: TextOverflow.ellipsis),
-            Text('Batch capture mode',
-                style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.6))),
+            Text('Project-Based Batch Scanning',
+                style: GoogleFonts.outfit(fontSize: 11, color: Colors.white60)),
           ],
         ),
         actions: [
           if (_captures.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: TextButton.icon(
-                onPressed: _isGenerating ? null : _confirmAndGenerate,
-                icon: const Icon(Icons.picture_as_pdf, color: Colors.white, size: 18),
-                label: Text('Report (${_captures.length})',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
+              padding: const EdgeInsets.only(right: 8),
+              child: _isGenerating 
+                ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+                : TextButton.icon(
+                    onPressed: _confirmAndGenerate,
+                    icon: const Icon(Icons.picture_as_pdf_outlined, color: Colors.white, size: 20),
+                    label: Text('EXPORT (${_captures.length})',
+                        style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
             ),
         ],
       ),
       body: Column(
         children: [
-          // ── Camera viewport ─────────────────────────────────────────────
           Expanded(
-            flex: 6,
+            flex: 7,
             child: LayoutBuilder(builder: (ctx, constraints) {
-              final size = constraints.maxWidth;
-              return Container(
-                width: size,
-                height: size,
-                color: Colors.black,
-                child: Stack(
-                  children: [
-                    // Preview
-                    if (_cameraReady)
-                      Center(
-                        child: AspectRatio(
-                          aspectRatio: 1 / _cam!.value.aspectRatio,
-                          child: CameraPreview(_cam!),
-                        ),
-                      )
-                    else
-                      const Center(
-                          child: CircularProgressIndicator(color: AppColors.primary)),
-
-                    // Live bounding boxes
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _BatchDetectionPainter(recognitions: _liveDetections),
+              return Stack(
+                children: [
+                  if (_cameraReady)
+                    Center(
+                      child: AspectRatio(
+                        aspectRatio: 1 / _cam!.value.aspectRatio,
+                        child: CameraPreview(_cam!),
                       ),
+                    )
+                  else
+                    const Center(child: CircularProgressIndicator(color: Colors.white)),
+
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _BatchDetectionPainter(recognitions: _liveDetections),
+                    ),
+                  ),
+
+                  Positioned(
+                    top: 16, right: 16,
+                    child: _badge(
+                      _isCapturing ? '📷 SAVING...' : '● AI SCANNING LIVE',
+                      _isCapturing ? const Color(0xFFF38020) : Colors.redAccent,
+                    ),
+                  ),
+
+                  if (_captures.isNotEmpty)
+                    Positioned(
+                      top: 16, left: 16,
+                      child: _badge('${_captures.length} captures', const Color(0xFF2D5096)),
                     ),
 
-                    // Status badge
-                    Positioned(
-                      top: 14, right: 14,
-                      child: _badge(
-                        _isCapturing
-                            ? '📷 CAPTURING…'
-                            : '● LIVE SCANNING',
-                        _isCapturing ? AppColors.secondary : Colors.red,
-                      ),
-                    ),
-
-                    // Frame counter badge
-                    if (_captures.isNotEmpty)
-                      Positioned(
-                        top: 14, left: 14,
-                        child: _badge('${_captures.length} frames', AppColors.primary),
-                      ),
-
-                    // Capture button (centred at bottom of viewport)
-                    Positioned(
-                      bottom: 20, left: 0, right: 0,
-                      child: Center(
-                        child: GestureDetector(
-                          onTap: _isCapturing || _isGenerating ? null : _captureFrame,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            width: _isCapturing ? 68 : 72,
-                            height: _isCapturing ? 68 : 72,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _isCapturing
-                                  ? AppColors.secondary
-                                  : Colors.white,
-                              border: Border.all(
-                                  color: AppColors.secondary, width: 4),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
-                                    blurRadius: 12)
-                              ],
-                            ),
-                            child: Icon(
-                              _isCapturing ? Icons.hourglass_top : Icons.camera,
-                              color: _isCapturing ? Colors.white : AppColors.primary,
-                              size: 32,
-                            ),
+                  Positioned(
+                    bottom: 30, left: 0, right: 0,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: _isCapturing || _isGenerating ? null : _captureFrame,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 100),
+                          width: _isCapturing ? 65 : 75,
+                          height: _isCapturing ? 65 : 75,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: const Color(0xFFF38020), width: 5),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black45, blurRadius: 15, spreadRadius: 2)
+                            ],
+                          ),
+                          child: Icon(
+                            _isCapturing ? Icons.hourglass_empty_rounded : Icons.camera_rounded,
+                            color: const Color(0xFF2D5096),
+                            size: 35,
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             }),
           ),
 
-          // ── Captured frames strip ────────────────────────────────────────
           Expanded(
-            flex: 4,
+            flex: 3,
             child: Container(
-              color: Colors.grey.shade100,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFAFBFC),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
               child: _captures.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.camera_enhance_outlined,
-                              size: 40, color: Colors.grey.shade400),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tap the shutter to capture frames.\nAll captures will appear here.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: Colors.grey.shade500, fontSize: 13),
-                          ),
-                        ],
-                      ),
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_photo_alternate_outlined, size: 48, color: Color(0xFFCBD5E0)),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Scan infrastructure and capture frames.\nEach detection will be added to the report.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7), fontSize: 13, height: 1.5),
+                        ),
+                      ],
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                          padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '${_captures.length} Frame(s) Captured',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 13),
+                                'SESSION CAPTURES',
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12, color: const Color(0xFF1D2B40), letterSpacing: 1),
                               ),
-                              if (_isGenerating)
-                                const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.primary)),
+                              Text('${_captures.length} items', style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7), fontSize: 12)),
                             ],
                           ),
                         ),
                         Expanded(
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: _captures.length,
-                            itemBuilder: (ctx, i) =>
-                                _FrameTile(
-                                  index: i,
-                                  result: _captures[i],
-                                  onRemove: () => _removeCapture(i),
-                                  onNoteChanged: (n) =>
-                                      setState(() => _captures[i].note = n),
-                                ),
+                            itemBuilder: (ctx, i) => _FrameTile(
+                              index: i,
+                              result: _captures[i],
+                              onRemove: () => _removeCapture(i),
+                              onNoteChanged: (n) => setState(() => _captures[i].note = n),
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 10),
                       ],
                     ),
             ),
@@ -398,26 +355,23 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
   }
 
   Widget _row(IconData icon, String label, String value) => Row(children: [
-    Icon(icon, size: 15, color: AppColors.primary),
-    const SizedBox(width: 6),
-    Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-    Expanded(child: Text(value, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)),
+    Icon(icon, size: 16, color: const Color(0xFF2D5096)),
+    const SizedBox(width: 8),
+    Text('$label: ', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF1D2B40))),
+    Expanded(child: Text(value, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF6E7C91)), overflow: TextOverflow.ellipsis)),
   ]);
 
   Widget _badge(String text, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.88),
+      color: color.withOpacity(0.9),
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(text,
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+        style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Horizontal frame tile (captured frames strip)
-// ─────────────────────────────────────────────────────────────────────────────
 class _FrameTile extends StatefulWidget {
   final int index;
   final PhotoResult result;
@@ -438,7 +392,7 @@ class _FrameTile extends StatefulWidget {
 class _FrameTileState extends State<_FrameTile> {
   Color _color(double score) {
     if (score > 0.7) return AppColors.severityHigh;
-    if (score > 0.4) return AppColors.severityMedium;
+    if (score > 4.0) return AppColors.severityMedium;
     return AppColors.severityLow;
   }
 
@@ -447,54 +401,66 @@ class _FrameTileState extends State<_FrameTile> {
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Frame ${widget.index + 1}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Capture Detail', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('Photo #${widget.index + 1}', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),
               onPressed: () { Navigator.pop(ctx); widget.onRemove(); },
             ),
           ]),
+          const SizedBox(height: 20),
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Image.file(File(r.imagePath), height: 200, width: double.infinity, fit: BoxFit.cover),
+            borderRadius: BorderRadius.circular(20),
+            child: Image.file(File(r.imagePath), height: 180, width: double.infinity, fit: BoxFit.cover),
           ),
+          const SizedBox(height: 20),
+          Text('AI ANALYSIS RESULTS', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFF38020), letterSpacing: 1)),
           const SizedBox(height: 12),
           if (r.detections.isEmpty)
-            const Text('✅ No damage detected', style: TextStyle(color: Colors.green))
-          else ...[
-            Text('${r.detections.length} detection(s):',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            ...r.detections.map((d) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+            Text('No anomalies detected in this frame.', style: GoogleFonts.outfit(color: Colors.green, fontWeight: FontWeight.w500))
+          else
+            ...r.detections.map((d) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
               child: Row(children: [
-                Icon(Icons.circle, size: 8, color: _color(d.score)),
-                const SizedBox(width: 6),
-                Expanded(child: Text(d.label.toUpperCase(),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-                Text('${(d.score * 100).toStringAsFixed(1)}% · ${d.severity}',
-                    style: TextStyle(fontSize: 12, color: _color(d.score))),
+                Icon(Icons.warning_rounded, size: 18, color: _color(d.score)),
+                const SizedBox(width: 12),
+                Expanded(child: Text(d.label.toUpperCase().replaceAll('_',' '),
+                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40)))),
+                Text('${(d.score * 100).toStringAsFixed(0)}% CONFIDENCE',
+                    style: GoogleFonts.outfit(fontSize: 11, color: _color(d.score), fontWeight: FontWeight.bold)),
               ]),
             )),
-          ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
           TextField(
             controller: TextEditingController(text: r.note),
+            style: GoogleFonts.outfit(fontSize: 14),
             decoration: InputDecoration(
-              labelText: 'Inspector note',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              labelText: 'Inspector Annotations',
+              labelStyle: GoogleFonts.outfit(color: const Color(0xFF2D5096)),
+              hintText: 'Add manual observation details here...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              contentPadding: const EdgeInsets.all(16),
             ),
             onChanged: widget.onNoteChanged,
-            maxLines: 2,
+            maxLines: 3,
           ),
+          const SizedBox(height: 12),
         ]),
       ),
     );
@@ -508,60 +474,53 @@ class _FrameTileState extends State<_FrameTile> {
     return GestureDetector(
       onTap: () => _showDetail(context),
       child: Container(
-        width: 110,
-        margin: const EdgeInsets.only(right: 10, bottom: 8, top: 4),
+        width: 130,
+        margin: const EdgeInsets.only(right: 12, bottom: 12, top: 4),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: hasDmg
-                ? AppColors.severityHigh.withOpacity(0.5)
-                : Colors.green.withOpacity(0.4),
-            width: 1.5,
-          ),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6)],
+          borderRadius: BorderRadius.circular(24),
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(24),
           child: Stack(
             fit: StackFit.expand,
             children: [
               Image.file(File(r.imagePath), fit: BoxFit.cover),
-              // Overlay
               Positioned(
                 bottom: 0, left: 0, right: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
-                      colors: [Colors.black.withOpacity(0.75), Colors.transparent],
+                      colors: [Colors.black.withOpacity(0.8), Colors.transparent],
                     ),
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Frame ${widget.index + 1}',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text('Capture #${widget.index + 1}',
+                        style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 2),
                     Text(
-                      hasDmg ? '⚠ ${r.detections.length} dmg' : '✓ Clear',
-                      style: TextStyle(
+                      hasDmg ? '${r.detections.length} ANOMALIES' : 'CLEAR FRAME',
+                      style: GoogleFonts.outfit(
                         fontSize: 9,
-                        color: hasDmg ? Colors.orangeAccent : Colors.greenAccent,
+                        color: hasDmg ? const Color(0xFFF38020) : const Color(0xFF4ED39A),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ]),
                 ),
               ),
-              // Remove X
               Positioned(
-                top: 4, right: 4,
+                top: 8, right: 8,
                 child: GestureDetector(
                   onTap: widget.onRemove,
                   child: Container(
-                    width: 20, height: 20,
-                    decoration: const BoxDecoration(
-                        color: Colors.black54, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, color: Colors.white, size: 12),
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), shape: BoxShape.circle),
+                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
                   ),
                 ),
               ),
@@ -573,9 +532,6 @@ class _FrameTileState extends State<_FrameTile> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bounding box painter (reused from InspectionScreen)
-// ─────────────────────────────────────────────────────────────────────────────
 class _BatchDetectionPainter extends CustomPainter {
   final List<Recognition> recognitions;
   _BatchDetectionPainter({required this.recognitions});
@@ -588,7 +544,7 @@ class _BatchDetectionPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 3.0;
+    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 3.5;
     final tp = TextPainter(textDirection: TextDirection.ltr);
 
     for (final rec in recognitions) {
@@ -599,18 +555,18 @@ class _BatchDetectionPainter extends CustomPainter {
         rec.location.bottom * size.height,
       );
       paint.color = _col(rec.score);
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), paint);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), paint);
 
       final label = '${rec.label.toUpperCase()}  ${(rec.score * 100).toStringAsFixed(0)}%';
       tp.text = TextSpan(text: label,
-          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold));
+          style: GoogleFonts.outfit(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold));
       tp.layout();
 
-      final bg = Rect.fromLTWH(rect.left, rect.top - tp.height - 6,
-          tp.width + 10, tp.height + 6);
-      canvas.drawRRect(RRect.fromRectAndRadius(bg, const Radius.circular(4)),
-          Paint()..color = paint.color);
-      tp.paint(canvas, Offset(rect.left + 5, rect.top - tp.height - 3));
+      final bg = Rect.fromLTWH(rect.left, rect.top - tp.height - 8,
+          tp.width + 12, tp.height + 8);
+      canvas.drawRRect(RRect.fromRectAndRadius(bg, const Radius.circular(6)),
+          Paint()..color = paint.color.withOpacity(0.9));
+      tp.paint(canvas, Offset(rect.left + 6, rect.top - tp.height - 4));
     }
   }
 

@@ -1,0 +1,14 @@
+# YOLOv8 format dataset configuration for Building Cracks Segmentation
+
+# Base path for the dataset
+path: /Users/sakshiumeshbane/AI-powered-infrastructure-Damage-Detection/infrastructure_monitor/data/
+
+# Relative paths to the train/val/test images
+train: train/images
+val: valid/images
+
+# Number of classes
+nc: 1
+
+# Class names
+names: ['crack']

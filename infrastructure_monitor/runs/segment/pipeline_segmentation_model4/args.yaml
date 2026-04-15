@@ -1,8 +1,8 @@
 task: segment
 mode: train
-model: yolov8n-seg.pt
+model: runs/segment/pipeline_segmentation_model4/weights/last.pt
 data: data/data.yaml
-epochs: 50
+epochs: 15
 time: null
 patience: 100
 batch: 16
@@ -11,7 +11,7 @@ save: true
 save_period: -1
 cache: false
 device: cpu
-workers: 8
+workers: 0
 project: null
 name: pipeline_segmentation_model4
 exist_ok: false
@@ -24,7 +24,7 @@ single_cls: false
 rect: false
 cos_lr: false
 close_mosaic: 10
-resume: false
+resume: runs/segment/pipeline_segmentation_model4/weights/last.pt
 amp: true
 fraction: 1.0
 profile: false
@@ -77,9 +77,10 @@ momentum: 0.937
 weight_decay: 0.0005
 warmup_epochs: 3.0
 warmup_momentum: 0.8
-warmup_bias_lr: 0.1
+warmup_bias_lr: 0.0
 box: 7.5
 cls: 0.5
+cls_pw: 0.0
 dfl: 1.5
 pose: 12.0
 kobj: 1.0
@@ -106,4 +107,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\runs\segment\pipeline_segmentation_model4
+save_dir: /Users/sakshiumeshbane/AI-powered-infrastructure-Damage-Detection/infrastructure_monitor/runs/segment/pipeline_segmentation_model4

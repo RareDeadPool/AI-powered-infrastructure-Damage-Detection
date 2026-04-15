@@ -1,0 +1,41 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Models and Large Data (optional, but keep it if user says push everything)
+# infrastructure_monitor/data/ - We are PUSHING this as per user request
+# infrastructure_monitor/runs/ - We are PUSHING this as per user request
+
+# MacOS debris
+.DS_Store
+
+# IDEs
+.vscode/
+
+# Build artifacts
+build/
+bin/
+obj/
+out/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Flutter
+.dart_tool/
+.pub-cache/
+.pub/
+android/app/build/
+ios/.generated/

@@ -14,8 +14,8 @@ venv/
 
 # Project specific
 venv_gpu/
-runs/
-data/
+# runs/
+# data/
 !data/data.yaml
 *.pt
 scratch/

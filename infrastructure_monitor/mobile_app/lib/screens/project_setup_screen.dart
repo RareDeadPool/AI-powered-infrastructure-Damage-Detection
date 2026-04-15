@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:uuid/uuid.dart';
 import '../utils/constants.dart';
+import '../models/project_model.dart';
+import '../repositories/project_repository.dart';
+import '../services/auth_service.dart';
 import 'inspection_screen.dart';
 import 'photo_batch_screen.dart';
 
@@ -18,23 +22,56 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
   
   bool _isFetchingLocation = false;
 
-  void _startInspection() {
-    if (_titleController.text.isEmpty || _locationController.text.isEmpty) {
+  Future<void> _startInspection() async {
+    final title = _titleController.text.trim();
+    final location = _locationController.text.trim();
+
+    if (title.isEmpty || location.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter all details!'), backgroundColor: AppColors.severityHigh)
       );
       return;
     }
-    
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => InspectionScreen(
-          projectTitle: _titleController.text,
-          location: _locationController.text,
+
+    setState(() => _isFetchingLocation = true); // Using this as simple loading state
+
+    try {
+      final String projectId = const Uuid().v4();
+      final String? userId = AuthService.currentUser?.uid;
+
+      if (userId == null) throw Exception("User not authenticated");
+
+      // SAVE TO HIVE
+      final newProject = Project(
+        id: projectId,
+        name: title,
+        createdAt: DateTime.now(),
+        userId: userId,
+        isSynced: false,
+      );
+      
+      await ProjectRepository.saveProject(newProject);
+
+      if (!mounted) return;
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InspectionScreen(
+            projectId: projectId,
+            projectTitle: title,
+            location: location,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error saving project: $e"), backgroundColor: AppColors.severityHigh)
+      );
+    } finally {
+      if (mounted) setState(() => _isFetchingLocation = false);
+    }
   }
 
   void _startBatchMode() {

@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "700781686455",
+    "project_id": "cityscan-8aed3",
+    "storage_bucket": "cityscan-8aed3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:700781686455:android:1064cbd6ebb67bc066e732",
+        "android_client_info": {
+          "package_name": "com.example.mobile_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "700781686455-8000mq48rrce02gdrde6gnjna84ak01c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtnwIMS-WyuHMJ54SnVCvouE5W-m-3NO0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "700781686455-8000mq48rrce02gdrde6gnjna84ak01c.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "700781686455-63mrp6k9121t8iaajeuusq1o62hiukf1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mobileApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

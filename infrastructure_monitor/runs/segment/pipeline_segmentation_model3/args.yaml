@@ -80,6 +80,7 @@ warmup_momentum: 0.8
 warmup_bias_lr: 0.1
 box: 7.5
 cls: 0.5
+cls_pw: 0.0
 dfl: 1.5
 pose: 12.0
 kobj: 1.0
@@ -106,4 +107,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\runs\segment\pipeline_segmentation_model3
+save_dir: /Users/sakshiumeshbane/AI-powered-infrastructure-Damage-Detection/infrastructure_monitor/runs/segment/pipeline_segmentation_model3

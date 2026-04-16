@@ -13,12 +13,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Simulate loading AI modules for 3 seconds then navigate to dashboard
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      // Routes directly to the Dashboard
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScreen()));
-    });
+    // The StreamBuilder in main.dart automatically transitions 
+    // to MainScreen once auth state is initialized. 
+    // We don't need manual navigation here.
   }
 
   @override

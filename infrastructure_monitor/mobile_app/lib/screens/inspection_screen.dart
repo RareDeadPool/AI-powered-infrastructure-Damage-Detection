@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
+import '../services/location_service.dart';
 import '../utils/constants.dart';
 import '../utils/location_helper.dart';
 import '../services/detector_service.dart';
@@ -121,15 +122,8 @@ class _InspectionScreenState extends State<InspectionScreen> {
   Future<void> _captureDetection() async {
     if (_cameraController == null) return;
     try {
-      // 1. Fetch Geo-coordinates precisely for this click
-      Position? position;
-      try {
-        position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.best,
-            timeLimit: const Duration(seconds: 3));
-      } catch (e) {
-        debugPrint("Location capture failed: $e");
-      }
+      // 1. Fetch Geo-coordinates precisely for this click using the modular service
+      Position? position = await LocationService.getCurrentLocation();
 
       // 2. Take a picture before pausing preview
       final image = await _cameraController!.takePicture();

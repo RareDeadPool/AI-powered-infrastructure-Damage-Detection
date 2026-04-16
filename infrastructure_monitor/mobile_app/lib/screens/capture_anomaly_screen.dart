@@ -7,6 +7,7 @@ import '../utils/constants.dart';
 import '../models/project_model.dart';
 import '../repositories/project_repository.dart';
 import '../services/auth_service.dart';
+import 'project_setup_screen.dart';
 
 class QuickDetectScreen extends StatefulWidget {
   const QuickDetectScreen({super.key});
@@ -109,12 +110,19 @@ class _QuickDetectScreenState extends State<QuickDetectScreen> {
               const SizedBox(height: 60),
               
               _buildActionButton(
-                label: 'Live Capture',
+                label: 'Project Scan',
                 icon: Icons.camera_alt_rounded,
                 color: const Color(0xFF2D5096),
                 onTap: _startLiveCapture,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              _buildActionButton(
+                label: 'Batch Mode',
+                icon: Icons.collections_rounded,
+                color: const Color(0xFF1D2B40), // Darker color for professional batch mode
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProjectSetupScreen())),
+              ),
+              const SizedBox(height: 20),
               _buildActionButton(
                 label: 'From Gallery',
                 icon: Icons.photo_library_rounded,

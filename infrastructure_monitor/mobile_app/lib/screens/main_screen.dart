@@ -5,6 +5,7 @@ import 'capture_anomaly_screen.dart';
 import 'project_setup_screen.dart';
 import 'analysis_screen.dart';
 import 'settings_page.dart';
+import 'report_screen.dart';
 import '../services/sync_manager.dart';
 import '../services/auth_service.dart';
 
@@ -20,7 +21,8 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _pages = [
     const HomeDashboardPage(),
-    const QuickDetectScreen(),
+    const QuickDetectScreen(), // This is the "Scan" function
+    const ReportScreen(),
     const AnalysisScreen(),
     const SettingsPage(),
   ];
@@ -47,6 +49,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Allows the FAB notch to look better
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
@@ -57,33 +60,37 @@ class _MainScreenState extends State<MainScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ProjectSetupScreen()),
-          );
-        },
+        onTap: () => _onTabTapped(1), // Index 1 is Scan
         child: Container(
-          height: 60,
-          width: 60,
-          margin: const EdgeInsets.only(top: 30),
+          height: 64,
+          width: 64,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const LinearGradient(
-              colors: [Color(0xFF2D5096), Color(0xFFF38020)],
+              colors: [Color(0xFF2D5096), Color(0xFF4ED39A)], // Blue to Green gradient
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: const Color(0xFFFAFBFC), width: 4),
+            border: Border.all(color: Colors.white, width: 4),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF2D5096).withOpacity(0.4),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                color: const Color(0xFF2D5096).withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               )
             ],
           ),
-          child: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 28),
+              const SizedBox(height: 2),
+              Text(
+                'SCAN',
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -103,22 +110,34 @@ class CustomBottomTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomAppBar(
-      color: Colors.white.withOpacity(0.95),
-      elevation: 20,
-      shadowColor: Colors.black12,
+      color: Colors.white,
+      elevation: 30,
+      shadowColor: Colors.black.withOpacity(0.2),
       shape: const CircularNotchedRectangle(),
-      notchMargin: 8.0,
+      notchMargin: 10.0,
       clipBehavior: Clip.antiAlias,
-      child: Padding(
+      child: Container(
+        height: 60,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildTabItem(icon: Icons.home_rounded, label: 'HOME', index: 0),
-            _buildTabItem(icon: Icons.add_circle_outline, label: 'CREATE', index: 1),
-            const SizedBox(width: 50), // Spacer for FAB
-            _buildTabItem(icon: Icons.auto_graph, label: 'ANALYSIS', index: 2),
-            _buildTabItem(icon: Icons.settings_outlined, label: 'SETTINGS', index: 3),
+            // Left pair
+            Row(
+              children: [
+                _buildTabItem(icon: Icons.home_rounded, label: 'HOME', index: 0),
+                const SizedBox(width: 20),
+                _buildTabItem(icon: Icons.description_outlined, label: 'REPORT', index: 2),
+              ],
+            ),
+            // Right pair
+            Row(
+              children: [
+                _buildTabItem(icon: Icons.auto_graph_rounded, label: 'ANALYSIS', index: 3),
+                const SizedBox(width: 20),
+                _buildTabItem(icon: Icons.settings_rounded, label: 'SETTINGS', index: 4),
+              ],
+            ),
           ],
         ),
       ),
@@ -127,33 +146,36 @@ class CustomBottomTabBar extends StatelessWidget {
 
   Widget _buildTabItem({required IconData icon, required String label, required int index}) {
     final bool isActive = currentIndex == index;
-    final color = isActive ? const Color(0xFF3B82F6) : const Color(0xFFA0ABBC);
+    final color = isActive ? const Color(0xFF2D5096) : const Color(0xFF94A3B8);
+    
     return InkWell(
       onTap: () => onTabTapped(index),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 6),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 60,
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isActive ? const Color(0xFFEEF4FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(height: 2),
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 4),
             Text(
               label,
               style: GoogleFonts.outfit(
                 color: color,
                 fontSize: 9,
-                fontWeight: FontWeight.w700,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                 letterSpacing: 0.5,
               ),
             ),
+            if (isActive)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                height: 4,
+                width: 4,
+                decoration: const BoxDecoration(color: Color(0xFF2D5096), shape: BoxShape.circle),
+              ),
           ],
         ),
       ),

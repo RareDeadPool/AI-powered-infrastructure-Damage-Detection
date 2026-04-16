@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -10,8 +12,40 @@ import '../models/project_model.dart';
 import 'project_setup_screen.dart';
 import '../widgets/brand_header.dart';
 
-class HomeDashboardPage extends StatelessWidget {
+class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
+
+  @override
+  State<HomeDashboardPage> createState() => _HomeDashboardPageState();
+}
+
+class _HomeDashboardPageState extends State<HomeDashboardPage> {
+  bool _isOnline = true;
+  StreamSubscription? _connectivitySubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialConnectivity();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      setState(() {
+        _isOnline = !results.contains(ConnectivityResult.none);
+      });
+    });
+  }
+
+  Future<void> _checkInitialConnectivity() async {
+    final results = await Connectivity().checkConnectivity();
+    setState(() {
+      _isOnline = !results.contains(ConnectivityResult.none);
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +54,7 @@ class HomeDashboardPage extends StatelessWidget {
       child: CustomScrollView(
         slivers: [
           const SliverToBoxAdapter(child: BrandHeader()),
-          const SliverToBoxAdapter(child: VitalityCard()),
+          SliverToBoxAdapter(child: VitalityCard(isOnline: _isOnline)),
           const SliverToBoxAdapter(child: SectionTitle(label: 'SPECIALIZED ANALYSIS', title: 'Detection Modules')),
           
           // Hardcoded Module Cards (UI Concept)
@@ -28,31 +62,34 @@ class HomeDashboardPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                const ModuleCard(
+                ModuleCard(
                   title: 'Pothole Detection',
                   description: 'Computer vision mapping for urban road maintenance.',
                   iconData: Icons.add_road,
-                  iconColor: Color(0xFFF38020),
-                  iconBgColor: Color(0xFFFFF2EA),
+                  iconColor: const Color(0xFFF38020),
+                  iconBgColor: const Color(0xFFFFF2EA),
                   imagePath: 'assets/pothole_detection.png',
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProjectSetupScreen())),
                 ),
                 const SizedBox(height: 20),
-                const ModuleCard(
+                ModuleCard(
                   title: 'Pipeline Monitoring',
                   description: 'Real-time pressure and structural integrity tracking.',
                   iconData: Icons.water_drop,
-                  iconColor: Color(0xFF4ED39A),
-                  iconBgColor: Color(0xFFE5FBEE),
+                  iconColor: const Color(0xFF4ED39A),
+                  iconBgColor: const Color(0xFFE5FBEE),
                   imagePath: 'assets/pipeline_monitoring.png',
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProjectSetupScreen())),
                 ),
                 const SizedBox(height: 20),
-                const ModuleCard(
+                ModuleCard(
                   title: 'Crack Analysis',
                   description: 'Precision measurement of concrete and steel fatigue.',
                   iconData: Icons.precision_manufacturing,
-                  iconColor: Color(0xFF558AFA),
-                  iconBgColor: Color(0xFFEFF3FF),
+                  iconColor: const Color(0xFF558AFA),
+                  iconBgColor: const Color(0xFFEFF3FF),
                   imagePath: 'assets/crack_analysis.png',
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProjectSetupScreen())),
                 ),
               ]),
             ),
@@ -172,7 +209,8 @@ class SectionTitle extends StatelessWidget {
 }
 
 class VitalityCard extends StatelessWidget {
-  const VitalityCard({super.key});
+  final bool isOnline;
+  const VitalityCard({super.key, required this.isOnline});
 
   @override
   Widget build(BuildContext context) {
@@ -197,16 +235,45 @@ class VitalityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'LIVE INFRASTRUCTURE HEALTH',
-              style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'LIVE INFRASTRUCTURE HEALTH',
+                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+                ),
+              ),
+              // Connectivity Bubble
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isOnline ? const Color(0xFF4ED39A).withOpacity(0.9) : const Color(0xFF558AFA).withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                      color: Colors.white,
+                      size: 10,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isOnline ? 'Online Mode' : 'Offline Mode',
+                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           Text(
@@ -222,9 +289,14 @@ class VitalityCard extends StatelessWidget {
             children: [
               _buildStat('98.2%', 'Accuracy'),
               const SizedBox(width: 24),
-              _buildStat('24', 'Projs'),
+              FutureBuilder<int>(
+                future: Future.value(ProjectRepository.getProjectsForUser(AuthService.currentUser?.uid ?? '').length),
+                builder: (context, snapshot) {
+                  return _buildStat(snapshot.data?.toString() ?? '...', 'Projects');
+                },
+              ),
               const SizedBox(width: 24),
-              _buildStat('Offline', 'Mode'),
+              _buildStat(isOnline ? 'Cloud' : 'Local', 'Target'),
             ],
           ),
         ],
@@ -250,6 +322,7 @@ class ModuleCard extends StatelessWidget {
   final Color iconColor;
   final Color iconBgColor;
   final String imagePath;
+  final VoidCallback onTap;
 
   const ModuleCard({
     super.key,
@@ -259,92 +332,61 @@ class ModuleCard extends StatelessWidget {
     required this.iconColor,
     required this.iconBgColor,
     required this.imagePath,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Image
-            SizedBox(
-              height: 180,
-              width: double.infinity,
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-              ),
-            ),
-            
-            // Bottom Content
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      color: const Color(0xFF1D2B40),
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: GoogleFonts.outfit(
-                      color: const Color(0xFF7B8EA7),
-                      fontSize: 14,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Icon(iconData, size: 16, color: iconColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        'MODULAR',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1D2B40),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Icon(Icons.bolt, size: 16, color: Color(0xFFF38020)),
-                      const SizedBox(width: 6),
-                      Text(
-                        'AI READY',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1D2B40),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: Image.asset(imagePath, fit: BoxFit.cover),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: GoogleFonts.outfit(color: const Color(0xFF1D2B40), fontSize: 22, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(description, style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7), fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(iconData, size: 16, color: iconColor),
+                        const SizedBox(width: 6),
+                        Text('MODULAR', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40))),
+                        const SizedBox(width: 16),
+                        const Icon(Icons.bolt, size: 16, color: Color(0xFFF38020)),
+                        const SizedBox(width: 6),
+                        Text('AI READY', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40))),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

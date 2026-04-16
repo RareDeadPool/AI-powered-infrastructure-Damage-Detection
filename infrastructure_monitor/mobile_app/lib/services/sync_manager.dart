@@ -10,8 +10,10 @@ class SyncManager {
 
   /// Checks if internet is available
   static Future<bool> hasInternet() async {
-    final connectivityResult = await (Connectivity().checkConnectivity());
-    return connectivityResult != ConnectivityResult.none;
+    final List<ConnectivityResult> connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.isEmpty) return false;
+    // For simplicity, check if ANY of the active connections provide internet
+    return !connectivityResult.contains(ConnectivityResult.none);
   }
 
   /// Synchronize all unsynced data to Firebase

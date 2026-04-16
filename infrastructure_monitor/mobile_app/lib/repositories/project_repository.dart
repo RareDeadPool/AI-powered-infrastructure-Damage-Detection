@@ -50,4 +50,8 @@ class ProjectRepository {
         .toList()
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   }
+
+  static List<Detection> getAllDetections() {
+    return DatabaseService.detectionsBox.values.toList();
+  }
 }

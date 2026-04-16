@@ -21,6 +21,10 @@ class ProjectRepository {
     return DatabaseService.projectsBox.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
+
+  static Project? getProjectById(String projectId) {
+    return DatabaseService.projectsBox.get(projectId);
+  }
   
   static List<Project> getProjectsForUser(String userId) {
     return DatabaseService.projectsBox.values.where((p) => p.userId == userId).toList()

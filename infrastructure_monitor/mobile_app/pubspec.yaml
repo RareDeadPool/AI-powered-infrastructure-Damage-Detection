@@ -39,6 +39,8 @@ dependencies:
   path: ^1.9.1
   google_fonts: ^8.0.2
   crypto: ^3.0.6
+  open_filex: ^4.7.0
+  url_launcher: ^6.3.2
 
 dependency_overrides:
   # Pin path_provider_foundation to a version that does NOT use

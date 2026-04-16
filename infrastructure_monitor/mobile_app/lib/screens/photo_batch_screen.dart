@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:uuid/uuid.dart';
 import '../utils/constants.dart';
 import '../utils/location_helper.dart';
 import '../services/detector_service.dart';
 import '../services/report_service.dart';
+import '../services/auth_service.dart';
 import '../models/recognition.dart';
+import '../models/project_model.dart';
+import '../models/detection_model.dart';
+import '../repositories/project_repository.dart';
 
 class PhotoResult {
   final String imagePath;
@@ -26,11 +31,13 @@ class PhotoResult {
 }
 
 class PhotoBatchScreen extends StatefulWidget {
+  final String projectId;
   final String projectTitle;
   final String location;
 
   const PhotoBatchScreen({
     super.key,
+    required this.projectId,
     required this.projectTitle,
     required this.location,
   });
@@ -201,11 +208,38 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
 
     setState(() => _isGenerating = true);
     try {
-      await ReportService.generateBatchReport(
+      // Save detections to Hive
+      for (final capture in _captures) {
+        for (final detection in capture.detections) {
+          final det = Detection(
+            id: const Uuid().v4(),
+            projectId: widget.projectId,
+            imagePath: capture.imagePath,
+            damageType: detection.label,
+            severity: detection.severity,
+            confidence: detection.score,
+            latitude: capture.lat,
+            longitude: capture.lng,
+            timestamp: DateTime.now(),
+          );
+          await ProjectRepository.saveDetection(det);
+        }
+      }
+
+      // Generate and save PDF report locally
+      final pdfPath = await ReportService.generateAndSaveBatchReport(
         projectTitle: widget.projectTitle,
         location: widget.location,
         photoResults: _captures,
       );
+
+      // Update project in Hive with PDF path and detection count
+      final project = ProjectRepository.getProjectById(widget.projectId);
+      if (project != null) {
+        project.reportPdfPath = pdfPath;
+        project.detectionCount = totalDmg;
+        await ProjectRepository.saveProject(project);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Generation failed: $e'),

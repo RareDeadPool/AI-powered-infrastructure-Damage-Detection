@@ -14,57 +14,6 @@ class HomeDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFBFC),
-      body: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
-          slivers: [
-            const SliverToBoxAdapter(child: HeaderWidget()),
-            const SliverToBoxAdapter(child: VitalityCard()),
-            
-            const SliverToBoxAdapter(
-              child: SectionTitle(
-                label: 'SPECIALIZED ANALYSIS',
-                title: 'Detection Modules',
-              ),
-            ),
-            
-            // Hardcoded Module Cards (UI Concept)
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  const ModuleCard(
-                    title: 'Pothole Detection',
-                    description: 'Computer vision mapping for urban road maintenance.',
-                    iconData: Icons.add_road,
-                    iconColor: Color(0xFFF38020),
-                    iconBgColor: Color(0xFFFFF2EA),
-                    imagePath: 'assets/pothole_detection.png',
-                  ),
-                  const SizedBox(height: 20),
-                  const ModuleCard(
-                    title: 'Pipeline Monitoring',
-                    description: 'Real-time pressure and structural integrity tracking.',
-                    iconData: Icons.water_drop,
-                    iconColor: Color(0xFF4ED39A),
-                    iconBgColor: Color(0xFFE5FBEE),
-                    imagePath: 'assets/pipeline_monitoring.png',
-                  ),
-                  const SizedBox(height: 20),
-                  const ModuleCard(
-                    title: 'Bridge Integrity',
-                    description: 'Precision measurement of concrete and steel fatigue.',
-                    iconData: Icons.precision_manufacturing,
-                    iconColor: Color(0xFF558AFA),
-                    iconBgColor: Color(0xFFEFF3FF),
-                    imagePath: 'assets/crack_analysis.png',
-                  ),
-                ]),
-              ),
-=======
     return SafeArea(
       bottom: false,
       child: CustomScrollView(
@@ -105,86 +54,85 @@ class HomeDashboardPage extends StatelessWidget {
                   imagePath: 'assets/crack_analysis.png',
                 ),
               ]),
->>>>>>> 4fc285463d412009cdbf061c2d4c943fa7fe500a
             ),
+          ),
 
-            const SliverToBoxAdapter(
-              child: SectionTitle(
-                label: 'OFFLINE SYNC',
-                title: 'Recent Inspections',
-              ),
+          const SliverToBoxAdapter(
+            child: SectionTitle(
+              label: 'OFFLINE SYNC',
+              title: 'Recent Inspections',
             ),
+          ),
 
-            // REAL HIVE DATA SECTION
-            ValueListenableBuilder(
-              valueListenable: DatabaseService.projectsBox.listenable(),
-              builder: (context, Box<Project> box, _) {
-                final projects = ProjectRepository.getProjectsForUser(AuthService.currentUser?.uid ?? '');
-                
-                if (projects.isEmpty) {
-                  return const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(40),
-                      child: Center(
-                        child: Text("No offline projects. Start an inspection!", style: TextStyle(color: Colors.grey)),
-                      ),
-                    ),
-                  );
-                }
-
-                return SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final project = projects[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.03),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                )
-                              ],
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                              leading: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF0F4F8),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(Icons.architecture, color: const Color(0xFF2D5096)),
-                              ),
-                              title: Text(project.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-                              subtitle: Text(project.createdAt.toString().split(' ')[0], style: GoogleFonts.outfit(fontSize: 12)),
-                              trailing: Icon(
-                                project.isSynced ? Icons.cloud_done : Icons.cloud_off,
-                                color: project.isSynced ? Colors.green : Colors.grey,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      childCount: projects.length > 5 ? 5 : projects.length, // Limit to 5 on home
+          // REAL HIVE DATA SECTION
+          ValueListenableBuilder(
+            valueListenable: DatabaseService.projectsBox.listenable(),
+            builder: (context, Box<Project> box, _) {
+              final projects = ProjectRepository.getProjectsForUser(AuthService.currentUser?.uid ?? '');
+              
+              if (projects.isEmpty) {
+                return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: Center(
+                      child: Text("No offline projects. Start an inspection!", style: TextStyle(color: Colors.grey)),
                     ),
                   ),
                 );
-              },
-            ),
+              }
 
-            const SliverPadding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 100),
-              sliver: SliverToBoxAdapter(child: StartInspectionButton()),
-            ),
-          ],
-        ),
+              return SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final project = projects[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            leading: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0F4F8),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.architecture, color: const Color(0xFF2D5096)),
+                            ),
+                            title: Text(project.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                            subtitle: Text(project.createdAt.toString().split(' ')[0], style: GoogleFonts.outfit(fontSize: 12)),
+                            trailing: Icon(
+                              project.isSynced ? Icons.cloud_done : Icons.cloud_off,
+                              color: project.isSynced ? Colors.green : Colors.grey,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: projects.length > 5 ? 5 : projects.length, // Limit to 5 on home
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 100),
+            sliver: SliverToBoxAdapter(child: StartInspectionButton()),
+          ),
+        ],
       ),
     );
   }
@@ -202,21 +150,8 @@ class HeaderWidget extends StatelessWidget {
         children: [
           Row(
             children: [
-<<<<<<< HEAD
-              Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFFF38020), Color(0xFFFBA864)]),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.offline_bolt_rounded, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 10),
-=======
               Image.asset('assets/cityscan_logo.png', height: 32),
               const SizedBox(width: 8),
->>>>>>> 4fc285463d412009cdbf061c2d4c943fa7fe500a
               RichText(
                 text: TextSpan(
                   style: GoogleFonts.outfit(

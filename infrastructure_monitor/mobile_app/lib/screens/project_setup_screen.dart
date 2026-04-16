@@ -4,6 +4,9 @@ import 'package:geocoding/geocoding.dart';
 import 'package:uuid/uuid.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/constants.dart';
+import '../services/auth_service.dart';
+import '../models/project_model.dart';
+import '../repositories/project_repository.dart';
 import 'inspection_screen.dart';
 import 'photo_batch_screen.dart';
 
@@ -20,7 +23,7 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
   
   bool _isFetchingLocation = false;
 
-  void _startInspection() {
+  Future<void> _startInspection() async {
     final title = _titleController.text.trim();
     final location = _locationController.text.trim();
 
@@ -32,6 +35,18 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
     }
 
     final String projectId = const Uuid().v4();
+
+    // Save project to Hive
+    final project = Project(
+      id: projectId,
+      name: title,
+      location: location,
+      createdAt: DateTime.now(),
+      userId: AuthService.currentUser?.uid ?? '',
+    );
+    await ProjectRepository.saveProject(project);
+
+    if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
@@ -45,7 +60,7 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
     );
   }
 
-  void _startBatchMode() {
+  Future<void> _startBatchMode() async {
     final title = _titleController.text.trim();
     final location = _locationController.text.trim();
 
@@ -56,10 +71,25 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
       return;
     }
 
+    final String projectId = const Uuid().v4();
+
+    // Save project to Hive
+    final project = Project(
+      id: projectId,
+      name: title,
+      location: location,
+      createdAt: DateTime.now(),
+      userId: AuthService.currentUser?.uid ?? '',
+    );
+    await ProjectRepository.saveProject(project);
+
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => PhotoBatchScreen(
+          projectId: projectId,
           projectTitle: title,
           location: location,
         ),

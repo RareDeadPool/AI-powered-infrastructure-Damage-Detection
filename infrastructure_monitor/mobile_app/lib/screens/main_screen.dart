@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'home_dashboard_page.dart';
 import 'capture_anomaly_screen.dart';
 import 'project_setup_screen.dart';
+import 'analysis_screen.dart';
 import '../services/sync_manager.dart';
+import '../services/auth_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -18,14 +20,21 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _pages = [
     const HomeDashboardPage(),
     const QuickDetectScreen(),
-    const Center(child: Text('Analysis Screen Placeholder', style: TextStyle(color: Colors.grey))),
+    const AnalysisScreen(),
     const Center(child: Text('Settings Screen Placeholder', style: TextStyle(color: Colors.grey))),
   ];
 
   @override
   void initState() {
     super.initState();
-    SyncManager.syncData();
+    final userId = AuthService.currentUser?.uid;
+    if (userId != null) {
+      SyncManager.pullData(userId).then((_) {
+        SyncManager.syncData();
+      });
+    } else {
+      SyncManager.syncData();
+    }
   }
 
   void _onTabTapped(int index) {

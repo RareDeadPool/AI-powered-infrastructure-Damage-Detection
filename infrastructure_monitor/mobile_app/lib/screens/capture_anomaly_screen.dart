@@ -4,6 +4,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'inspection_screen.dart';
 import '../utils/constants.dart';
+import '../models/project_model.dart';
+import '../repositories/project_repository.dart';
+import '../services/auth_service.dart';
 
 class QuickDetectScreen extends StatefulWidget {
   const QuickDetectScreen({super.key});
@@ -15,19 +18,55 @@ class QuickDetectScreen extends StatefulWidget {
 class _QuickDetectScreenState extends State<QuickDetectScreen> {
   final ImagePicker _picker = ImagePicker();
 
-  Future<void> _handleCapture(ImageSource source) async {
+  Future<void> _startLiveCapture() async {
+    final userId = AuthService.currentUser?.uid ?? '';
+    final projectId = 'quick_scan_${DateTime.now().millisecondsSinceEpoch}';
+
+    final project = Project(
+      id: projectId,
+      name: 'Live Anomaly Capture',
+      createdAt: DateTime.now(),
+      userId: userId,
+      location: 'Manual Geo-Tag',
+    );
+    await ProjectRepository.saveProject(project);
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InspectionScreen(
+          projectId: projectId,
+          projectTitle: 'Live Anomaly Capture',
+          location: 'Manual Geo-Tag',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickFromGallery() async {
     try {
-      final XFile? image = await _picker.pickImage(source: source);
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image != null) {
+        final userId = AuthService.currentUser?.uid ?? '';
+        final projectId = 'quick_scan_${DateTime.now().millisecondsSinceEpoch}';
+
+        final project = Project(
+          id: projectId,
+          name: 'Gallery Scan Analysis',
+          createdAt: DateTime.now(),
+          userId: userId,
+          location: 'Manual Geo-Tag',
+        );
+        await ProjectRepository.saveProject(project);
+
         if (!mounted) return;
-        
-        // Navigate to InspectionScreen with a temporary Quick Scan context
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => InspectionScreen(
-              projectId: 'quick_scan_${DateTime.now().millisecondsSinceEpoch}',
-              projectTitle: 'Quick Anomaly Capture',
+              projectId: projectId,
+              projectTitle: 'Gallery Scan Analysis',
               location: 'Manual Geo-Tag',
               initialImage: File(image.path),
             ),
@@ -49,120 +88,38 @@ class _QuickDetectScreenState extends State<QuickDetectScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               'QUICK DETECT',
-              style: GoogleFonts.outfit(color: const Color(0xFFF38020), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              style: GoogleFonts.outfit(color: const Color(0xFFF38020), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Text(
               'Capture Anomaly',
-              style: GoogleFonts.outfit(color: const Color(0xFF1D2B40), fontSize: 26, fontWeight: FontWeight.w800),
+              style: GoogleFonts.outfit(color: const Color(0xFF1D2B40), fontSize: 32, fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 24),
-            
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(32),
-                  color: Colors.black,
-                  image: const DecorationImage(
-                    image: const AssetImage('assets/pothole_detection.png'),
-                    fit: BoxFit.cover,
-                    opacity: 0.6,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 30,
-                      offset: const Offset(0, 15),
-                    )
-                  ],
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: 20,
-                      right: 20,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.flash_off, color: Colors.white),
-                      ),
-                    ),
-                    Center(
-                      child: Container(
-                        width: 250,
-                        height: 250,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 24,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Text(
-                          'ALIGN CAMERA WITH DAMAGE',
-                          style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.7), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
-                        ),
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Text(
-              'Select AI Mode',
-              style: GoogleFonts.outfit(color: const Color(0xFF1D2B40), fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: const [
-                  ModuleChip(label: 'Pothole', icon: Icons.add_road, isActive: true),
-                  SizedBox(width: 12),
-                  ModuleChip(label: 'Pipeline', icon: Icons.water_drop),
-                  SizedBox(width: 12),
-                  ModuleChip(label: 'Crack', icon: Icons.precision_manufacturing),
-                ],
-              ),
+              'Instantly scan environments for infrastructure damage or upload existing footage for rapid AI evaluation.',
+              style: GoogleFonts.outfit(color: const Color(0xFF6E7C91), fontSize: 16, height: 1.4),
             ),
             
-            const SizedBox(height: 32),
+            const SizedBox(height: 60),
             
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionButton(
-                    label: 'Live Capture',
-                    icon: Icons.camera_alt_rounded,
-                    color: const Color(0xFF2D5096),
-                    onTap: () => _handleCapture(ImageSource.camera),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildActionButton(
-                    label: 'From Gallery',
-                    icon: Icons.photo_library_rounded,
-                    color: const Color(0xFFF38020),
-                    onTap: () => _handleCapture(ImageSource.gallery),
-                  ),
-                ),
-              ],
+            _buildActionButton(
+              label: 'Live Capture',
+              icon: Icons.camera_alt_rounded,
+              color: const Color(0xFF2D5096),
+              onTap: _startLiveCapture,
             ),
-            const SizedBox(height: 100), // Space for bottom bar
+            const SizedBox(height: 24),
+            _buildActionButton(
+              label: 'From Gallery',
+              icon: Icons.photo_library_rounded,
+              color: const Color(0xFFF38020),
+              onTap: _pickFromGallery,
+            ),
           ],
         ),
       ),
@@ -176,7 +133,8 @@ class _QuickDetectScreenState extends State<QuickDetectScreen> {
     required VoidCallback onTap,
   }) {
     return Container(
-      height: 64,
+      height: 70,
+      width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: color,
@@ -192,53 +150,15 @@ class _QuickDetectScreenState extends State<QuickDetectScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.white, size: 22),
-              const SizedBox(width: 10),
+              Icon(icon, color: Colors.white, size: 28),
+              const SizedBox(width: 14),
               Text(
                 label,
-                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class ModuleChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isActive;
-
-  const ModuleChip({
-    super.key,
-    required this.label,
-    required this.icon,
-    this.isActive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFEEF4FF) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isActive ? const Color(0xFF3B82F6) : const Color(0xFFEDF2F7)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: isActive ? const Color(0xFF3B82F6) : const Color(0xFF7B8EA7), size: 20),
-          const SizedBox(width: 10),
-          Text(
-            label,
-            style: GoogleFonts.outfit(
-              color: isActive ? const Color(0xFF3B82F6) : const Color(0xFF1D2B40),
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-            ),
-          ),
-        ],
       ),
     );
   }

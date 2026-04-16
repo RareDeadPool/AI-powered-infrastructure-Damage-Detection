@@ -19,12 +19,28 @@ class Project extends HiveObject {
   @HiveField(4)
   String userId;
 
+  @HiveField(5)
+  String location;
+
+  @HiveField(6)
+  String? reportPdfPath;
+
+  @HiveField(7)
+  String? reportPdfUrl;
+
+  @HiveField(8)
+  int detectionCount;
+
   Project({
     required this.id,
     required this.name,
     required this.createdAt,
     this.isSynced = false,
     required this.userId,
+    this.location = '',
+    this.reportPdfPath,
+    this.reportPdfUrl,
+    this.detectionCount = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -34,6 +50,9 @@ class Project extends HiveObject {
       'createdAt': createdAt.toIso8601String(),
       'isSynced': isSynced,
       'userId': userId,
+      'location': location,
+      'reportPdfUrl': reportPdfUrl,
+      'detectionCount': detectionCount,
     };
   }
 
@@ -44,6 +63,9 @@ class Project extends HiveObject {
       createdAt: DateTime.parse(map['createdAt']),
       isSynced: map['isSynced'] ?? false,
       userId: map['userId'],
+      location: map['location'] ?? '',
+      reportPdfUrl: map['reportPdfUrl'],
+      detectionCount: map['detectionCount'] ?? 0,
     );
   }
 }

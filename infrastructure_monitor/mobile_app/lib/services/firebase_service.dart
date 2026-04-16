@@ -33,4 +33,35 @@ class FirebaseService {
       return false;
     }
   }
+
+  // Fetch all projects for a specific user from Firestore
+  static Future<List<Project>> fetchUserProjects(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('projects')
+          .where('userId', isEqualTo: userId)
+          .get();
+      
+      return snapshot.docs.map((doc) => Project.fromMap(doc.data())).toList();
+    } catch (e) {
+      print('Error fetching projects from cloud: $e');
+      return [];
+    }
+  }
+
+  // Fetch all detections for a specific project from Firestore
+  static Future<List<Detection>> fetchProjectDetections(String projectId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('detections')
+          .where('projectId', isEqualTo: projectId)
+          .get();
+      
+      return snapshot.docs.map((doc) => Detection.fromMap(doc.data())).toList();
+    } catch (e) {
+      print('Error fetching detections from cloud: $e');
+      return [];
+    }
+  }
 }
+

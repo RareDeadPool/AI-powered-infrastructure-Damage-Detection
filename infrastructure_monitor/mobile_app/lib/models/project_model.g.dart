@@ -22,13 +22,17 @@ class ProjectAdapter extends TypeAdapter<Project> {
       createdAt: fields[2] as DateTime,
       isSynced: fields[3] as bool,
       userId: fields[4] as String,
+      location: fields[5] as String,
+      reportPdfPath: fields[6] as String?,
+      reportPdfUrl: fields[7] as String?,
+      detectionCount: fields[8] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, Project obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -38,7 +42,15 @@ class ProjectAdapter extends TypeAdapter<Project> {
       ..writeByte(3)
       ..write(obj.isSynced)
       ..writeByte(4)
-      ..write(obj.userId);
+      ..write(obj.userId)
+      ..writeByte(5)
+      ..write(obj.location)
+      ..writeByte(6)
+      ..write(obj.reportPdfPath)
+      ..writeByte(7)
+      ..write(obj.reportPdfUrl)
+      ..writeByte(8)
+      ..write(obj.detectionCount);
   }
 
   @override

@@ -3,6 +3,7 @@ import '../models/project_model.dart';
 import '../models/detection_model.dart';
 import '../repositories/project_repository.dart';
 import 'firebase_service.dart';
+import 'cloudinary_service.dart';
 
 class SyncManager {
   static bool _isSyncing = false;
@@ -61,7 +62,26 @@ class SyncManager {
           }
         }
 
-        // 3. Sync project metadata to Cloud
+        // 3. Upload PDF report to Cloudinary if exists locally but not uploaded
+        if (project.reportPdfPath != null && 
+            project.reportPdfPath!.isNotEmpty &&
+            (project.reportPdfUrl == null || project.reportPdfUrl!.isEmpty)) {
+          print('Uploading PDF report for project: ${project.id}');
+          final pdfUrl = await CloudinaryService.uploadFile(
+            project.reportPdfPath!,
+            folder: 'reports/${project.userId}',
+          );
+          if (pdfUrl != null) {
+            project.reportPdfUrl = pdfUrl;
+            await ProjectRepository.saveProject(project);
+            print('PDF report uploaded: $pdfUrl');
+          } else {
+            print('Failed to upload PDF for project: ${project.id}');
+            projectSyncSuccess = false;
+          }
+        }
+
+        // 4. Sync project metadata to Cloud
         if (projectSyncSuccess) {
           final projectSaved = await FirebaseService.saveProjectToCloud(project);
           if (projectSaved) {
@@ -82,4 +102,37 @@ class SyncManager {
       print('Synchronization process finished.');
     }
   }
+
+  /// Pull all data from Firebase for the given user and save to Hive
+  static Future<void> pullData(String userId) async {
+    final isOnline = await hasInternet();
+    if (!isOnline) {
+      print('Pull skipped: No internet connection');
+      return;
+    }
+
+    print('Starting data pull from Firebase for user: $userId');
+    try {
+      // 1. Fetch user projects from cloud
+      final cloudProjects = await FirebaseService.fetchUserProjects(userId);
+      
+      for (final project in cloudProjects) {
+        // Save project locally. This will overwrite if it exists, or create if it doesn't.
+        // It keeps the local Hive database in sync with the cloud.
+        await ProjectRepository.saveProject(project);
+        print('Pulled project: ${project.id}');
+
+        // 2. Fetch detections for this project from cloud
+        final cloudDetections = await FirebaseService.fetchProjectDetections(project.id);
+        for (final detection in cloudDetections) {
+          // Save detection locally
+          await ProjectRepository.saveDetection(detection);
+        }
+      }
+      print('Data pull completed successfully.');
+    } catch (e) {
+      print('Error during data pull: $e');
+    }
+  }
 }
+

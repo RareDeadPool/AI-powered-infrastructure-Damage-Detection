@@ -7,6 +7,9 @@ import '../utils/location_helper.dart';
 import '../services/detector_service.dart';
 import '../services/report_service.dart';
 import '../models/recognition.dart';
+import '../models/detection_model.dart';
+import '../repositories/project_repository.dart';
+import 'package:uuid/uuid.dart';
 
 class InspectionScreen extends StatefulWidget {
   final String projectId;
@@ -46,7 +49,25 @@ class _InspectionScreenState extends State<InspectionScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    if (widget.initialImage != null) {
+      _isLive = false;
+      _capturedImagePath = widget.initialImage!.path;
+      _detectorService.init().then((_) {
+        _runStaticInference(widget.initialImage!);
+      });
+    } else {
+      _initializeCamera();
+    }
+  }
+
+  Future<void> _runStaticInference(File file) async {
+    setState(() => _isAnalyzing = true);
+    final results = await _detectorService.predict(file);
+    if (!mounted) return;
+    setState(() {
+      _savedDetections = results;
+      _isAnalyzing = false;
+    });
   }
 
   Future<void> _initializeCamera() async {
@@ -205,17 +226,20 @@ class _InspectionScreenState extends State<InspectionScreen> {
                               child: CameraPreview(_cameraController!),
                             ),
                           )
+                        else if (widget.initialImage != null)
+                          Image.file(widget.initialImage!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
                         else
                           const Center(child: CircularProgressIndicator(color: AppColors.primary)),
 
                         // Real-time Bounding Boxes
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: DetectionPainter(
-                              recognitions: _isLive ? _detections : _savedDetections,
+                        if (!_isAnalyzing)
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: DetectionPainter(
+                                recognitions: _isLive ? _detections : _savedDetections,
+                              ),
                             ),
                           ),
-                        ),
 
                         // Mode Tag
                         Positioned(
@@ -268,26 +292,28 @@ class _InspectionScreenState extends State<InspectionScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _isCameraInitialized ? (_isLive ? _captureDetection : _resumeLive) : null,
-                        icon: Icon(_isLive ? Icons.camera : Icons.refresh, size: 22),
-                        label: Text(_isLive ? "CAPTURE INCIDENT" : "RESUME SCAN"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isLive ? AppColors.primary : AppColors.secondary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    if (widget.initialImage == null)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _isCameraInitialized ? (_isLive ? _captureDetection : _resumeLive) : null,
+                          icon: Icon(_isLive ? Icons.camera : Icons.refresh, size: 22),
+                          label: Text(_isLive ? "CAPTURE INCIDENT" : "RESUME SCAN"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isLive ? AppColors.primary : AppColors.secondary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
                         ),
                       ),
-                    ),
                     if (!_isLive) ...[
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {
+                          onPressed: () async {
                             if (_capturedImagePath != null && _savedDetections.isNotEmpty) {
-                              ReportService.generateAndShareReport(
+                              
+                              final pdfPath = await ReportService.generateAndSaveSingleReport(
                                 projectTitle: widget.projectTitle,
                                 location: widget.location,
                                 detections: _savedDetections,
@@ -295,6 +321,40 @@ class _InspectionScreenState extends State<InspectionScreen> {
                                 lat: _captureLat,
                                 lng: _captureLng,
                               );
+
+                              // Save individual detections tied to this projectId
+                              for (var rec in _savedDetections) {
+                                final detection = Detection(
+                                  id: const Uuid().v4(),
+                                  projectId: widget.projectId,
+                                  damageType: rec.label,
+                                  severity: rec.score > 0.7 ? "High" : (rec.score > 0.4 ? "Medium" : "Low"),
+                                  confidence: rec.score,
+                                  imagePath: _capturedImagePath!,
+                                  latitude: _captureLat,
+                                  longitude: _captureLng,
+                                  timestamp: DateTime.now(),
+                                );
+                                await ProjectRepository.saveDetection(detection);
+                              }
+
+                              // Update parent project with PDF path and anomaly count
+                              final project = ProjectRepository.getProjectById(widget.projectId);
+                              if (project != null) {
+                                project.detectionCount = _savedDetections.length;
+                                if (pdfPath != null) {
+                                  project.reportPdfPath = pdfPath;
+                                }
+                                await ProjectRepository.saveProject(project);
+                              }
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Report successfully saved for syncing!"))
+                                );
+                                // optionally Navigator.pop(context) to leave screen
+                              }
+
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text("No detections to report!"))

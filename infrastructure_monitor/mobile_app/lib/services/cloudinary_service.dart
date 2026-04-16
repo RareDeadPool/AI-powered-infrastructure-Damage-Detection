@@ -72,6 +72,64 @@ class CloudinaryService {
     }
   }
 
+  /// Uploads a raw file (PDF, etc.) to Cloudinary using a signed request.
+  /// Returns the secure URL of the uploaded file or null on failure.
+  static Future<String?> uploadFile(String filePath, {String? folder}) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        print('Cloudinary: File does not exist at $filePath');
+        return null;
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      final params = <String, String>{
+        'timestamp': timestamp.toString(),
+      };
+      if (folder != null) {
+        params['folder'] = folder;
+      }
+
+      final signature = _generateSignature(params, apiSecret);
+
+      // Use 'raw/upload' endpoint for non-image files like PDFs
+      final uri = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/raw/upload");
+      final request = http.MultipartRequest("POST", uri);
+
+      final stream = http.ByteStream(file.openRead());
+      final length = await file.length();
+      final multipartFile = http.MultipartFile(
+        'file',
+        stream,
+        length,
+        filename: p.basename(filePath),
+      );
+      request.files.add(multipartFile);
+
+      request.fields['api_key'] = apiKey;
+      request.fields['timestamp'] = timestamp.toString();
+      request.fields['signature'] = signature;
+      if (folder != null) {
+        request.fields['folder'] = folder;
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return data['secure_url'] as String;
+      } else {
+        print('Cloudinary Raw Upload Failed: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Cloudinary Raw Upload Error: $e');
+      return null;
+    }
+  }
+
   /// Generates a Cloudinary signature.
   /// SHA1(params_sorted_by_key_and_joined_by_&_and_=_ + apiSecret)
   static String _generateSignature(Map<String, String> params, String secret) {
@@ -88,3 +146,4 @@ class CloudinaryService {
     return sha1.convert(utf8.encode(toSign)).toString();
   }
 }
+

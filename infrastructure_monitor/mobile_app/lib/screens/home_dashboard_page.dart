@@ -188,6 +188,10 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.currentUser;
+    final displayName = user?.displayName ?? 'Inspector';
+    final email = user?.email ?? 'No email associated';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 30, 20, 15),
       child: Column(

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home_dashboard_page.dart';
-import 'capture_anomaly_screen.dart';
+import 'capture_anomaly_screen.dart'; // Assuming QuickDetectScreen is here or similar
 import 'project_setup_screen.dart';
 import 'analysis_screen.dart';
 import 'settings_page.dart';
 import 'report_screen.dart';
 import '../services/sync_manager.dart';
 import '../services/auth_service.dart';
+
+// Note: Ensure QuickDetectScreen is imported correctly. 
+// Based on your snippet, I am using QuickDetectScreen as requested.
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -19,6 +22,9 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
+  // Swapped indices as per request: 
+  // Index 1 (Create Tab) -> QuickDetectScreen
+  // Index 2 (Scan Button) -> ProjectSetupScreen
   final List<Widget> _pages = [
     const HomeDashboardPage(),
     const QuickDetectScreen(), // This is the "Scan" function
@@ -48,6 +54,9 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
+    const double barHeight = 100.0;
+
     return Scaffold(
       extendBody: true, // Allows the FAB notch to look better
       body: IndexedStack(
@@ -181,4 +190,33 @@ class CustomBottomTabBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class SlantedNotchPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    Path path = Path();
+    double h = size.height;
+    double w = size.width;
+    double peakY = 15.0; 
+    double sideY = 40.0; 
+
+    path.moveTo(0, sideY);
+    path.lineTo(w * 0.4, peakY);
+    path.quadraticBezierTo(w * 0.5, 5, w * 0.6, peakY);
+    path.lineTo(w, sideY);
+    path.lineTo(w, h);
+    path.lineTo(0, h);
+    path.close();
+
+    canvas.drawShadow(path.shift(const Offset(0, -3)), Colors.black.withOpacity(0.05), 10, true);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

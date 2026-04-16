@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -107,12 +108,18 @@ class ReportService {
     required String location,
     required List<Recognition> detections,
     required String imagePath,
+    String? inspectorName,
+    String? projectSummary,
     double? lat,
     double? lng,
   }) async {
     final date = DateFormat('yyyy-MM-dd  HH:mm').format(DateTime.now());
 
-    // Annotate the image before building the PDF
+    // Load Logo
+    final logoBytes = (await rootBundle.load('assets/brand/logo.png')).buffer.asUint8List();
+    final logoImage = pw.MemoryImage(logoBytes);
+
+    // Annotate the image
     final rawBytes = await File(imagePath).readAsBytes();
     final annotatedBytes = await _annotateImage(
       imageBytes: rawBytes,
@@ -128,174 +135,181 @@ class ReportService {
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
           return [
-            // ── Header ──────────────────────────────────────────────────────
-            pw.Header(
-              level: 0,
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(
-                    'Infrastructure Damage Report',
-                    style: pw.TextStyle(
-                      fontSize: 20,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.blue900,
-                    ),
-                  ),
-                  pw.Text(
-                    date,
-                    style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
-                  ),
-                ],
-              ),
-            ),
-
-            pw.SizedBox(height: 16),
-
-            // ── Project Info ─────────────────────────────────────────────────
-            pw.Container(
-              padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.blue50,
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Row(children: [
-                    pw.Text('Project: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    pw.Text(projectTitle),
-                  ]),
-                  pw.SizedBox(height: 4),
-                  pw.Row(children: [
-                    pw.Text('Location: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    pw.Text(location),
-                  ]),
-                  pw.SizedBox(height: 4),
-                  if (lat != null && lng != null) ...[
-                    pw.Row(children: [
-                      pw.Text('GPS Coordinates: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                      pw.Text(LocationHelper.formatToCardinal(lat, lng), style: const pw.TextStyle(fontSize: 10, color: PdfColors.blue700)),
-                    ]),
+            // ── Header with Logo ─────────────────────────────────────────────
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Image(logoImage, height: 40),
                     pw.SizedBox(height: 4),
+                    pw.Text('CITYSCAN INFRASTRUCTURE MONITOR', 
+                      style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700, letterSpacing: 1.2)),
                   ],
-                  pw.Row(children: [
-                    pw.Text('Detections: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    pw.Text('${detections.length} damage type(s) found'),
-                  ]),
-                ],
-              ),
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text('DAMAGE REPORT', 
+                      style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                    pw.Text(date, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+                  ],
+                ),
+              ],
             ),
 
+            pw.SizedBox(height: 10),
+            pw.Divider(thickness: 2, color: PdfColors.blue900),
             pw.SizedBox(height: 20),
 
-            // ── Annotated Evidence Image ────────────────────────────────────
-            pw.Text(
-              'Visual Evidence  (detections annotated)',
-              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+            // ── Project & Inspector Details ──────────────────────────────────
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _labelValue('Project', projectTitle),
+                      _labelValue('Location', location),
+                      if (lat != null && lng != null)
+                        _labelValue('GPS', LocationHelper.formatToProjectCoordinates(lat, lng)),
+                    ],
+                  ),
+                ),
+                pw.Container(width: 1, height: 60, color: PdfColors.grey300, margin: const pw.EdgeInsets.symmetric(horizontal: 20)),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _labelValue('Inspector', inspectorName ?? 'Authorized CityScan Official'),
+                      _labelValue('Report ID', 'CS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}'),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            pw.SizedBox(height: 8),
-            pw.Center(
-              child: pw.Container(
-                height: 310,
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey400),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-                ),
-                child: pw.ClipRRect(
-                  horizontalRadius: 8,
-                  verticalRadius: 8,
-                  child: pw.Image(image, fit: pw.BoxFit.contain),
-                ),
+
+            pw.SizedBox(height: 15),
+            
+            // ── One-line Summary ────────────────────────────────────────────
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey100,
+                border: const pw.Border(left: pw.BorderSide(color: PdfColors.blue900, width: 4)),
+              ),
+              child: pw.Text(
+                projectSummary ?? 'AI-assisted structural integrity assessment for ${projectTitle.toLowerCase()} infrastructure.',
+                style: pw.TextStyle(fontSize: 11, fontStyle: pw.FontStyle.italic),
               ),
             ),
 
-            pw.SizedBox(height: 24),
+            pw.SizedBox(height: 25),
+
+            // ── Visual Evidence ─────────────────────────────────────────────
+            pw.Text('VISUAL ANALYSIS & ANNOTATIONS', 
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey800)),
+            pw.SizedBox(height: 10),
+            pw.Center(
+              child: pw.Container(
+                height: 320,
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                ),
+                child: pw.Image(image, fit: pw.BoxFit.contain),
+              ),
+            ),
+
+            pw.SizedBox(height: 25),
 
             // ── Detection Summary Table ────────────────────────────────────
-            pw.Text(
-              'Detection Summary',
-              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 8),
+            pw.Text('FINDINGS SUMMARY', 
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey800)),
+            pw.SizedBox(height: 10),
             pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey300),
-              columnWidths: {
-                0: const pw.FlexColumnWidth(3),
-                1: const pw.FlexColumnWidth(2),
-                2: const pw.FlexColumnWidth(2),
-              },
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
               children: [
-                // Header row
                 pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.blueGrey100),
+                  decoration: const pw.BoxDecoration(color: PdfColors.blueGrey50),
                   children: [
-                    _cell('Damage Type', bold: true),
-                    _cell('Confidence', bold: true),
-                    _cell('Severity', bold: true),
+                    _cell('ANOMALY TYPE', bold: true),
+                    _cell('CONFIDENCE', bold: true),
+                    _cell('SEVERITY', bold: true),
                   ],
                 ),
-                // Data rows
                 ...detections.map((d) => pw.TableRow(
                   children: [
                     _cell(d.label.replaceAll('_', ' ').toUpperCase()),
                     _cell('${(d.score * 100).toStringAsFixed(1)}%'),
-                    _cell(d.severity),
+                    _cell(d.severity, color: d.severity == 'High' ? PdfColors.red800 : (d.severity == 'Medium' ? PdfColors.orange800 : PdfColors.green800)),
                   ],
                 )),
               ],
             ),
 
-            pw.SizedBox(height: 36),
+            pw.SizedBox(height: 40),
 
             // ── Footer ────────────────────────────────────────────────────
             pw.Divider(color: PdfColors.grey300),
-            pw.SizedBox(height: 8),
-            pw.Text(
-              'Generated by AI Infrastructure Monitor  •  $date',
-              style: pw.TextStyle(
-                fontSize: 9,
-                fontStyle: pw.FontStyle.italic,
-                color: PdfColors.grey600,
-              ),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('This is an AI-generated official inspection report.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                pw.Text('Page 1 of 1', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              ],
             ),
           ];
         },
       ),
     );
 
-    // Save PDF to local file system
+    // Save and Layout
     try {
       final dir = await getApplicationDocumentsDirectory();
       final reportsDir = Directory('${dir.path}/reports');
-      if (!await reportsDir.exists()) {
-        await reportsDir.create(recursive: true);
-      }
-      final fileName = 'Damage_Report_${projectTitle.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      if (!await reportsDir.exists()) await reportsDir.create(recursive: true);
+      
+      final fileName = 'Report_${projectTitle.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${reportsDir.path}/$fileName');
       final pdfBytes = await pdf.save();
       await file.writeAsBytes(pdfBytes);
-      print('Report saved locally: ${file.path}');
-
-      // Also show print/share dialog
-      await Printing.layoutPdf(
-        onLayout: (_) async => pdfBytes,
-        name: fileName,
-      );
-
+      
+      await Printing.layoutPdf(onLayout: (_) async => pdfBytes, name: fileName);
       return file.path;
     } catch (e) {
-      print('Error saving report locally: $e');
+      print('Error saving report: $e');
       return null;
     }
   }
 
-  static pw.Widget _cell(String text, {bool bold = false}) {
+  static pw.Widget _labelValue(String label, String value) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const pw.EdgeInsets.only(bottom: 6),
+      child: pw.RichText(
+        text: pw.TextSpan(
+          children: [
+            pw.TextSpan(text: '$label: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.grey800)),
+            pw.TextSpan(text: value, style: const pw.TextStyle(fontSize: 10, color: PdfColors.black)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _cell(String text, {bool bold = false, PdfColor? color}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: pw.Text(
         text,
-        style: bold ? pw.TextStyle(fontWeight: pw.FontWeight.bold) : const pw.TextStyle(),
+        style: pw.TextStyle(
+          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+          fontSize: 9,
+          color: color ?? PdfColors.black,
+        ),
       ),
     );
   }
@@ -303,13 +317,19 @@ class ReportService {
   // ────────────────────────────────────────────────────────────────────────────
   // Batch Report — multiple photos each with their own annotated section
   // ────────────────────────────────────────────────────────────────────────────
-  static Future<void> generateBatchReport({
+  static Future<String?> generateAndSaveBatchReport({
     required String projectTitle,
     required String location,
     required List<PhotoResult> photoResults,
+    String? inspectorName,
+    String? projectSummary,
   }) async {
     final date = DateFormat('yyyy-MM-dd  HH:mm').format(DateTime.now());
     final pdf = pw.Document();
+
+    // Load Logo
+    final logoBytes = (await rootBundle.load('assets/brand/logo.png')).buffer.asUint8List();
+    final logoImage = pw.MemoryImage(logoBytes);
 
     // Pre-annotate all images
     final List<pw.MemoryImage> annotatedImages = [];
@@ -331,58 +351,87 @@ class ReportService {
         build: (pw.Context context) {
           final List<pw.Widget> widgets = [];
 
-          // ── Report Header ──────────────────────────────────────────────────
-          widgets.add(pw.Header(
-            level: 0,
-            child: pw.Row(
+          // ── Header with Logo ─────────────────────────────────────────────
+          widgets.add(
+            pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Text('Infrastructure Batch Inspection Report',
-                    style: pw.TextStyle(
-                        fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
-                pw.Text(date,
-                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Image(logoImage, height: 40),
+                    pw.SizedBox(height: 4),
+                    pw.Text('CITYSCAN INFRASTRUCTURE MONITOR', 
+                      style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700, letterSpacing: 1.2)),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text('BATCH INSPECTION REPORT', 
+                      style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                    pw.Text(date, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+                  ],
+                ),
               ],
             ),
-          ));
+          );
 
-          widgets.add(pw.SizedBox(height: 14));
+          widgets.add(pw.SizedBox(height: 10));
+          widgets.add(pw.Divider(thickness: 2, color: PdfColors.blue900));
+          widgets.add(pw.SizedBox(height: 20));
 
           // ── Project Summary Box ────────────────────────────────────────────
-          widgets.add(pw.Container(
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.blue50,
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+          widgets.add(
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _labelValue('Project', projectTitle),
+                      _labelValue('Location', location),
+                      _labelValue('Photos Inspected', photoResults.length.toString()),
+                    ],
+                  ),
+                ),
+                pw.Container(width: 1, height: 60, color: PdfColors.grey300, margin: const pw.EdgeInsets.symmetric(horizontal: 20)),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _labelValue('Inspector', inspectorName ?? 'Authorized CityScan Official'),
+                      _labelValue('Total Anomalies', totalDetections.toString()),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Row(children: [
-                pw.Text('Project: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text(projectTitle),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Location: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text(location),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Photos inspected: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text('${photoResults.length}'),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Total damages found: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text('$totalDetections'),
-              ]),
-            ]),
-          ));
+          );
+
+          widgets.add(pw.SizedBox(height: 15));
+          
+          widgets.add(
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey100,
+                border: const pw.Border(left: pw.BorderSide(color: PdfColors.blue900, width: 4)),
+              ),
+              child: pw.Text(
+                projectSummary ?? 'AI-assisted batch structural assessment for $projectTitle. Compiled metadata and visual evidence follow.',
+                style: pw.TextStyle(fontSize: 11, fontStyle: pw.FontStyle.italic),
+              ),
+            ),
+          );
 
           widgets.add(pw.SizedBox(height: 24));
 
           // ── Per-photo sections ─────────────────────────────────────────────
           for (int i = 0; i < photoResults.length; i++) {
-            final pr = photoResults[i];
+            final pr = photoResults[ i];
             final detections = pr.detections;
             final note = pr.note;
 
@@ -390,22 +439,21 @@ class ReportService {
               padding: const pw.EdgeInsets.all(14),
               margin: const pw.EdgeInsets.only(bottom: 20),
               decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300),
+                border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
                 borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
               ),
               child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
 
-                // Section title
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Photo ${i + 1}',
-                        style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('PHOTO ${i + 1}',
+                        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
                     pw.Text(
-                      detections.isEmpty ? '✓ No damage' : '⚠ ${detections.length} damage(s)',
+                      detections.isEmpty ? '✓ NO DAMAGE DETECTED' : '⚠ ${detections.length} ANOMALIE(S) IDENTIFIED',
                       style: pw.TextStyle(
-                        fontSize: 11,
-                        color: detections.isEmpty ? PdfColors.green700 : PdfColors.red700,
+                        fontSize: 10,
+                        color: detections.isEmpty ? PdfColors.green800 : PdfColors.red800,
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
@@ -414,278 +462,53 @@ class ReportService {
 
                 pw.SizedBox(height: 10),
 
-                // Geo-Tag (North, East, West, South format)
                 if (pr.lat != null && pr.lng != null)
                   pw.Container(
                     margin: const pw.EdgeInsets.only(bottom: 8),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: const pw.BoxDecoration(
-                      color: PdfColors.blueGrey50,
-                      borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
+                    decoration: const pw.BoxDecoration(color: PdfColors.blueGrey50),
                     child: pw.Row(children: [
-                      pw.Text('GPS Coordinates: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                      pw.Text(LocationHelper.formatToCardinal(pr.lat!, pr.lng!), style: const pw.TextStyle(fontSize: 10, color: PdfColors.blue900)),
+                      pw.Text('GPS: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                      pw.Text(LocationHelper.formatToProjectCoordinates(pr.lat!, pr.lng!), style: const pw.TextStyle(fontSize: 9, color: PdfColors.blue900)),
                     ]),
                   ),
 
-                // Annotated image
                 pw.Center(
                   child: pw.Container(
                     height: 260,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey300),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.ClipRRect(
-                      horizontalRadius: 6,
-                      verticalRadius: 6,
-                      child: pw.Image(annotatedImages[i], fit: pw.BoxFit.contain),
-                    ),
+                    child: pw.Image(annotatedImages[i], fit: pw.BoxFit.contain),
                   ),
                 ),
 
-                // Inspector note
                 if (note.isNotEmpty) ...[
-                  pw.SizedBox(height: 8),
+                  pw.SizedBox(height: 10),
                   pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.amber50,
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.Row(children: [
-                      pw.Text('Note: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                      pw.Flexible(child: pw.Text(note, style: const pw.TextStyle(fontSize: 11))),
+                    padding: const pw.EdgeInsets.all(8),
+                    decoration: const pw.BoxDecoration(color: PdfColors.amber50),
+                    child: pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                      pw.Text('Inspector Note: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                      pw.Flexible(child: pw.Text(note, style: const pw.TextStyle(fontSize: 10))),
                     ]),
                   ),
                 ],
 
-                // Detection table
                 if (detections.isNotEmpty) ...[
                   pw.SizedBox(height: 10),
-                  pw.Text('Detections',
-                      style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 6),
                   pw.Table(
-                    border: pw.TableBorder.all(color: PdfColors.grey300),
-                    columnWidths: {
-                      0: const pw.FlexColumnWidth(3),
-                      1: const pw.FlexColumnWidth(2),
-                      2: const pw.FlexColumnWidth(2),
-                    },
+                    border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
                     children: [
                       pw.TableRow(
-                        decoration: const pw.BoxDecoration(color: PdfColors.blueGrey100),
+                        decoration: const pw.BoxDecoration(color: PdfColors.grey100),
                         children: [
-                          _cell('Damage Type', bold: true),
-                          _cell('Confidence', bold: true),
-                          _cell('Severity', bold: true),
+                          _cell('ANOMALY TYPE', bold: true),
+                          _cell('CONFIDENCE', bold: true),
+                          _cell('SEVERITY', bold: true),
                         ],
                       ),
                       ...detections.map((d) => pw.TableRow(children: [
                         _cell(d.label.replaceAll('_', ' ').toUpperCase()),
                         _cell('${(d.score * 100).toStringAsFixed(1)}%'),
-                        _cell(d.severity),
-                      ])),
-                    ],
-                  ),
-                ],
-              ]),
-            ));
-          }
-
-          // ── Footer ─────────────────────────────────────────────────────────
-          widgets.add(pw.Divider(color: PdfColors.grey300));
-          widgets.add(pw.SizedBox(height: 6));
-          widgets.add(pw.Text(
-            'Generated by AI Infrastructure Monitor  •  $date',
-            style: pw.TextStyle(fontSize: 9, fontStyle: pw.FontStyle.italic, color: PdfColors.grey600),
-          ));
-
-          return widgets;
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(
-      onLayout: (_) async => pdf.save(),
-      name: 'Batch_Report_${projectTitle.replaceAll(' ', '_')}.pdf',
-    );
-  }
-
-  /// Generates a batch PDF report, saves it locally, AND shows print dialog.
-  /// Returns the local file path of the saved PDF.
-  static Future<String?> generateAndSaveBatchReport({
-    required String projectTitle,
-    required String location,
-    required List<PhotoResult> photoResults,
-  }) async {
-    final date = DateFormat('yyyy-MM-dd  HH:mm').format(DateTime.now());
-    final pdf = pw.Document();
-
-    // Pre-annotate all images
-    final List<pw.MemoryImage> annotatedImages = [];
-    for (final pr in photoResults) {
-      final raw = await File(pr.imagePath).readAsBytes();
-      final annotated = await _annotateImage(
-        imageBytes: raw,
-        detections: pr.detections,
-      );
-      annotatedImages.add(pw.MemoryImage(annotated));
-    }
-
-    final int totalDetections = photoResults.fold(0, (sum, pr) => sum + pr.detections.length);
-
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) {
-          final List<pw.Widget> widgets = [];
-
-          widgets.add(pw.Header(
-            level: 0,
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Infrastructure Batch Inspection Report',
-                    style: pw.TextStyle(
-                        fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
-                pw.Text(date,
-                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-              ],
-            ),
-          ));
-
-          widgets.add(pw.SizedBox(height: 14));
-
-          widgets.add(pw.Container(
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.blue50,
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-            ),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Row(children: [
-                pw.Text('Project: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text(projectTitle),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Location: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text(location),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Photos inspected: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text('${photoResults.length}'),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Total damages found: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text('$totalDetections'),
-              ]),
-            ]),
-          ));
-
-          widgets.add(pw.SizedBox(height: 24));
-
-          for (int i = 0; i < photoResults.length; i++) {
-            final pr = photoResults[i];
-            final detections = pr.detections;
-            final note = pr.note;
-
-            widgets.add(pw.Container(
-              padding: const pw.EdgeInsets.all(14),
-              margin: const pw.EdgeInsets.only(bottom: 20),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-              ),
-              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Photo ${i + 1}',
-                        style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
-                    pw.Text(
-                      detections.isEmpty ? '✓ No damage' : '⚠ ${detections.length} damage(s)',
-                      style: pw.TextStyle(
-                        fontSize: 11,
-                        color: detections.isEmpty ? PdfColors.green700 : PdfColors.red700,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 10),
-                if (pr.lat != null && pr.lng != null)
-                  pw.Container(
-                    margin: const pw.EdgeInsets.only(bottom: 8),
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: const pw.BoxDecoration(
-                      color: PdfColors.blueGrey50,
-                      borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.Row(children: [
-                      pw.Text('GPS Coordinates: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                      pw.Text(LocationHelper.formatToCardinal(pr.lat!, pr.lng!), style: const pw.TextStyle(fontSize: 10, color: PdfColors.blue900)),
-                    ]),
-                  ),
-                pw.Center(
-                  child: pw.Container(
-                    height: 260,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey300),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.ClipRRect(
-                      horizontalRadius: 6,
-                      verticalRadius: 6,
-                      child: pw.Image(annotatedImages[i], fit: pw.BoxFit.contain),
-                    ),
-                  ),
-                ),
-                if (note.isNotEmpty) ...[
-                  pw.SizedBox(height: 8),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.amber50,
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.Row(children: [
-                      pw.Text('Note: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                      pw.Flexible(child: pw.Text(note, style: const pw.TextStyle(fontSize: 11))),
-                    ]),
-                  ),
-                ],
-                if (detections.isNotEmpty) ...[
-                  pw.SizedBox(height: 10),
-                  pw.Text('Detections',
-                      style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 6),
-                  pw.Table(
-                    border: pw.TableBorder.all(color: PdfColors.grey300),
-                    columnWidths: {
-                      0: const pw.FlexColumnWidth(3),
-                      1: const pw.FlexColumnWidth(2),
-                      2: const pw.FlexColumnWidth(2),
-                    },
-                    children: [
-                      pw.TableRow(
-                        decoration: const pw.BoxDecoration(color: PdfColors.blueGrey100),
-                        children: [
-                          _cell('Damage Type', bold: true),
-                          _cell('Confidence', bold: true),
-                          _cell('Severity', bold: true),
-                        ],
-                      ),
-                      ...detections.map((d) => pw.TableRow(children: [
-                        _cell(d.label.replaceAll('_', ' ').toUpperCase()),
-                        _cell('${(d.score * 100).toStringAsFixed(1)}%'),
-                        _cell(d.severity),
+                        _cell(d.severity, color: d.severity == 'High' ? PdfColors.red800 : (d.severity == 'Medium' ? PdfColors.orange800 : PdfColors.green800)),
                       ])),
                     ],
                   ),
@@ -695,10 +518,12 @@ class ReportService {
           }
 
           widgets.add(pw.Divider(color: PdfColors.grey300));
-          widgets.add(pw.SizedBox(height: 6));
-          widgets.add(pw.Text(
-            'Generated by AI Infrastructure Monitor  •  $date',
-            style: pw.TextStyle(fontSize: 9, fontStyle: pw.FontStyle.italic, color: PdfColors.grey600),
+          widgets.add(pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('CITYSCAN OFFICIAL BATCH INSPECTION RECORD', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              pw.Text('Generated by AI Infrastructure Monitor', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+            ],
           ));
 
           return widgets;
@@ -706,28 +531,20 @@ class ReportService {
       ),
     );
 
-    // Save PDF to local file system
     try {
       final dir = await getApplicationDocumentsDirectory();
       final reportsDir = Directory('${dir.path}/reports');
-      if (!await reportsDir.exists()) {
-        await reportsDir.create(recursive: true);
-      }
+      if (!await reportsDir.exists()) await reportsDir.create(recursive: true);
+      
       final fileName = 'Batch_Report_${projectTitle.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${reportsDir.path}/$fileName');
       final pdfBytes = await pdf.save();
       await file.writeAsBytes(pdfBytes);
-      print('Report saved locally: ${file.path}');
-
-      // Also show print/share dialog
-      await Printing.layoutPdf(
-        onLayout: (_) async => pdfBytes,
-        name: fileName,
-      );
-
+      
+      await Printing.layoutPdf(onLayout: (_) async => pdfBytes, name: fileName);
       return file.path;
     } catch (e) {
-      print('Error saving report locally: $e');
+      print('Error saving report: $e');
       return null;
     }
   }

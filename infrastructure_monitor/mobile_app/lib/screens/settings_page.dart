@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'about_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/detector_service.dart';
@@ -158,7 +159,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 👤 PROFILE HEADER
-                  _buildProfileHeader(displayName, email),
+                  _buildProfileHeader(displayName, email, () => _showEditProfileDialog(displayName)),
                   
                   const SizedBox(height: 32),
 
@@ -248,8 +249,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         const Divider(height: 1, indent: 50),
                         _buildActionTile(
                           icon: Icons.info_outline_rounded,
-                          label: 'About CityScan v1.2.0',
-                          onTap: () {},
+                          label: 'About CityScan v26.0',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen())),
                           color: const Color(0xFF64748B),
                         ),
                         const Divider(height: 1, indent: 50),
@@ -273,7 +274,53 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildProfileHeader(String name, String email) {
+  void _showEditProfileDialog(String currentName) {
+    final TextEditingController nameController = TextEditingController(text: currentName);
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("Edit Profile", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: "Full Name",
+                labelStyle: GoogleFonts.outfit(),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2D5096), foregroundColor: Colors.white),
+            onPressed: () async {
+              final newName = nameController.text.trim();
+              if (newName.isNotEmpty) {
+                Navigator.pop(ctx);
+                setState(() => _isLoading = true);
+                try {
+                  await AuthService.updateProfile(fullName: newName);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated successfully")));
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                } finally {
+                  setState(() => _isLoading = false);
+                }
+              }
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(String name, String email, VoidCallback onEdit) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -293,8 +340,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             child: CircleAvatar(
               radius: 40,
-              backgroundImage: const AssetImage('assets/inspector_avatar.png'),
               backgroundColor: Colors.grey.shade100,
+              child: const Icon(Icons.person_outline_rounded, size: 40, color: Color(0xFF2D5096)),
             ),
           ),
           const SizedBox(width: 20),
@@ -313,7 +360,10 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
-          const Icon(Icons.edit_note_rounded, color: Color(0xFFCBD5E0)),
+          IconButton(
+            icon: const Icon(Icons.edit_note_rounded, color: Color(0xFF2D5096)),
+            onPressed: onEdit,
+          ),
         ],
       ),
     );

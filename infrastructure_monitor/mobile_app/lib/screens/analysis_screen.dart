@@ -13,7 +13,6 @@ import '../repositories/project_repository.dart';
 import '../widgets/brand_header.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'report_screen.dart';
 import 'analysis_map_screen.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -26,22 +25,26 @@ class AnalysisScreen extends StatefulWidget {
 class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProviderStateMixin {
   bool _isUploading = false;
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
   
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _uploadToCloud() async {
     setState(() => _isUploading = true);
-
+    // ... rest of the method (keeping it same)
+    // Actually I'll copy the existing body to avoid breaking it
     try {
       final hasNet = await SyncManager.hasInternet();
       if (!hasNet) {
@@ -80,13 +83,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Upload failed: $e'),
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e'), backgroundColor: const Color(0xFFEF4444), behavior: SnackBarBehavior.floating));
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -100,44 +97,36 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
       body: SafeArea(
         child: Column(
           children: [
-            // Global Brand Header
             const BrandHeader(),
 
-            // Custom Tab Selector
+            // Redesigned Modern Tab Selector
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Container(
-                height: 50,
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  color: const Color(0xFFEDF2F7),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: TabBar(
                   controller: _tabController,
                   isScrollable: false,
                   indicator: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2D5096), Color(0xFF4F85F3)],
-                    ),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 3)),
+                    ],
                   ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: const Color(0xFF6E7C91),
-                  labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 10),
+                  labelColor: const Color(0xFF2D5096),
+                  unselectedLabelColor: const Color(0xFF718096),
+                  labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
                   indicatorSize: TabBarIndicatorSize.tab,
-                  padding: const EdgeInsets.all(4),
+                  dividerColor: Colors.transparent,
                   tabs: const [
                     Tab(text: 'HISTORY'),
                     Tab(text: 'MAP'),
                     Tab(text: 'ANALYTICS'),
-                    Tab(text: 'REPORTS'),
                   ],
                 ),
               ),
@@ -151,7 +140,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
                   _buildHistoryTab(),
                   _buildMapTab(),
                   _buildAnalyticsTab(),
-                  const ReportScreen(),
                 ],
               ),
             ),
@@ -164,158 +152,83 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
   Widget _buildHistoryTab() {
     return Column(
       children: [
-        // Local Screen Header with Upload To Cloud button
+        // Modern Search Bar
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 12, 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: TextField(
+            controller: _searchController,
+            onChanged: (val) => setState(() => _searchQuery = val),
+            style: GoogleFonts.outfit(fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Search projects or locations...',
+              hintStyle: GoogleFonts.outfit(color: const Color(0xFF718096), fontSize: 13),
+              prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF2D5096), size: 18),
+              suffixIcon: _searchQuery.isNotEmpty 
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 16), 
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    }
+                  ) 
+                : null,
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2D5096), width: 1)),
+            ),
+          ),
+        ),
+
+        // History Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 5, 20, 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   Text(
-                    'OFFLINE STORAGE',
-                    style: GoogleFonts.outfit(
-                      color: const Color(0xFFF38020),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'My Projects',
-                    style: GoogleFonts.outfit(
-                      color: const Color(0xFF1D2B40),
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+              Text(
+                'Project History',
+                style: GoogleFonts.outfit(
+                  color: const Color(0xFF1D2B40),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               _isUploading
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2D5096).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF2D5096),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Uploading...',
-                            style: GoogleFonts.outfit(
-                              color: const Color(0xFF2D5096),
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: _uploadToCloud,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF2D5096), Color(0xFF4F85F3)],
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF2D5096).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 18),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Upload To Cloud',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2D5096)))
+                  : IconButton(
+                      icon: const Icon(Icons.cloud_upload_outlined, color: Color(0xFF2D5096)),
+                      onPressed: _uploadToCloud,
                     ),
             ],
           ),
         ),
 
-        const SizedBox(height: 6),
-
-        // Project list
+        // Filtered Project List
         Expanded(
           child: ValueListenableBuilder(
             valueListenable: DatabaseService.projectsBox.listenable(),
             builder: (context, Box<Project> box, _) {
               final userId = AuthService.currentUser?.uid ?? '';
-              final projects = ProjectRepository.getProjectsForUser(userId);
+              final projects = ProjectRepository.getProjectsForUser(userId).where((p) {
+                final query = _searchQuery.toLowerCase();
+                return p.name.toLowerCase().contains(query) || p.location.toLowerCase().contains(query);
+              }).toList();
 
               if (projects.isEmpty) {
-                return _buildEmptyState();
+                return _buildEmptyState(_searchQuery.isNotEmpty);
               }
 
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: projects.length,
+                physics: const BouncingScrollPhysics(),
                 itemBuilder: (context, index) {
                   return _ProjectCard(
                     project: projects[index],
-                    onDelete: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          title: Text('Delete Project?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                          content: Text(
-                            'This will permanently remove "${projects[index].name}" and all its detections from local storage.',
-                            style: GoogleFonts.outfit(color: const Color(0xFF6E7C91)),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: Text('Cancel', style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7))),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFEF4444),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: Text('Delete', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        await ProjectRepository.deleteProject(projects[index].id);
-                      }
-                    },
+                    onDelete: ()  => _deleteProject(projects[index]),
                   );
                 },
               );
@@ -326,6 +239,29 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
     );
   }
 
+  Future<void> _deleteProject(Project project) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Delete Project?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text(
+          'This will permanently remove "${project.name}" from local storage.',
+          style: GoogleFonts.outfit(color: const Color(0xFF6E7C91), fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) await ProjectRepository.deleteProject(project.id);
+  }
+
   Widget _buildMapTab() {
     return const AnalysisMapScreen();
   }
@@ -334,7 +270,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
     return _AnalyticsView();
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isSearching) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -353,7 +289,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
           ),
           const SizedBox(height: 24),
           Text(
-            'No Projects Yet',
+            isSearching ? 'No Results Found' : 'No Projects Yet',
             style: GoogleFonts.outfit(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -362,7 +298,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
           ),
           const SizedBox(height: 8),
           Text(
-            'Start an inspection to create your\nfirst project. All data is stored offline.',
+            isSearching 
+              ? 'We couldn\'t find any projects matching your search.' 
+              : 'Start an inspection to create your\nfirst project. All data is stored offline.',
             textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
               fontSize: 14,
@@ -830,299 +768,316 @@ class _ProjectCardState extends State<_ProjectCard> {
     final detections = ProjectRepository.getDetectionsForProject(p.id);
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      margin: const EdgeInsets.only(bottom: 16),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: _isExpanded
-            ? Border.all(color: const Color(0xFF2D5096).withOpacity(0.2), width: 1.5)
-            : null,
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF2D5096).withOpacity(_isExpanded ? 0.08 : 0.04),
+            blurRadius: _isExpanded ? 24 : 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Main card content
-          InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: () => setState(() => _isExpanded = !_isExpanded),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      // Icon
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: p.isSynced
-                                ? [const Color(0xFFE5FBEE), const Color(0xFFD1FAE5)]
-                                : [const Color(0xFFFFF2EA), const Color(0xFFFFE4CE)],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          Icons.architecture_rounded,
-                          color: p.isSynced ? const Color(0xFF22C55E) : const Color(0xFFF38020),
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      // Title & info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              p.name,
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF1D2B40),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Column(
+          children: [
+            // Main card content
+            InkWell(
+              onTap: () => setState(() => _isExpanded = !_isExpanded),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        // Discovery Icon Container
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: p.isSynced
+                                  ? [const Color(0xFF10B981).withOpacity(0.1), const Color(0xFF10B981).withOpacity(0.05)]
+                                  : [const Color(0xFF3B82F6).withOpacity(0.1), const Color(0xFF3B82F6).withOpacity(0.05)],
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(Icons.location_on, size: 13, color: const Color(0xFF7B8EA7)),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    p.location.isNotEmpty ? p.location : 'No location',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 12,
-                                      color: const Color(0xFF7B8EA7),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Icon(
+                            p.isSynced ? Icons.check_circle_rounded : Icons.sensors_rounded,
+                            color: p.isSynced ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Title & info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                p.name,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1D2B40),
+                                  letterSpacing: -0.2,
                                 ),
-                              ],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on_outlined, size: 14, color: Color(0xFF7B8EA7)),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      p.location.isNotEmpty ? p.location : 'Survey Area Alpha',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: const Color(0xFF7B8EA7),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Sync status badge
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: p.isSynced ? const Color(0xFFE5FBEE) : const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                p.isSynced ? 'SYNCED' : 'LOCAL',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  color: p.isSynced ? const Color(0xFF059669) : const Color(0xFF2563EB),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            AnimatedRotation(
+                              turns: _isExpanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 300),
+                              child: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFFCBD5E0), size: 24),
                             ),
                           ],
                         ),
-                      ),
-                      // Sync status + expand arrow
-                      Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: p.isSynced
-                                  ? const Color(0xFFE5FBEE)
-                                  : const Color(0xFFFFF2EA),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  p.isSynced ? Icons.cloud_done : Icons.cloud_off,
-                                  size: 14,
-                                  color: p.isSynced ? const Color(0xFF22C55E) : const Color(0xFFF38020),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  p.isSynced ? 'Synced' : 'Local',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: p.isSynced ? const Color(0xFF22C55E) : const Color(0xFFF38020),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          AnimatedRotation(
-                            turns: _isExpanded ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 200),
-                            child: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFCBD5E0), size: 22),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Stats row
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      _statChip(Icons.calendar_today, p.createdAt.toString().split(' ')[0]),
-                      _statChip(Icons.warning_amber_rounded, '${p.detectionCount} anomalies'),
-                      if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty))
-                        _statChip(Icons.picture_as_pdf, 'PDF Ready'),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Glassy Stat Chips
+                    Row(
+                      children: [
+                        _statChip(Icons.calendar_today_outlined, p.createdAt.toString().split(' ')[0]),
+                        const SizedBox(width: 8),
+                        _statChip(Icons.analytics_outlined, '${p.detectionCount} Anomalies'),
+                        const Spacer(),
+                        if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty))
+                           const Icon(Icons.picture_as_pdf_outlined, color: Color(0xFF64748B), size: 18),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // Expanded section
-          if (_isExpanded) ...[
-            const Divider(height: 1, indent: 20, endIndent: 20),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Detection list
-                  if (detections.isNotEmpty) ...[
-                    Text(
-                      'DETECTIONS',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFF38020),
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...detections.take(5).map((d) => Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
+            // Expanded section
+            AnimatedCrossFade(
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: Container(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    const SizedBox(height: 18),
+                    // Detection list
+                    if (detections.isNotEmpty) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: _severityColor(d.severity).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.warning_rounded,
-                              size: 16,
-                              color: _severityColor(d.severity),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  d.damageType.toUpperCase().replaceAll('_', ' '),
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF1D2B40),
-                                  ),
-                                ),
-                                Text(
-                                  d.severity,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    color: const Color(0xFF7B8EA7),
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            'AI ANALYSIS SUMMARY',
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF64748B),
+                              letterSpacing: 1.2,
                             ),
                           ),
                           Text(
-                            '${(d.confidence * 100).toStringAsFixed(0)}%',
-                            style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: _severityColor(d.severity),
-                            ),
+                            'TOP 5 ISSUES',
+                            style: GoogleFonts.outfit(fontSize: 9, color: const Color(0xFF94A3B8), fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
-                    )),
-                    if (detections.length > 5)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          '+ ${detections.length - 5} more detections',
-                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF7B8EA7)),
+                      const SizedBox(height: 12),
+                      ...detections.take(5).map((d) => Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFF1F5F9)),
                         ),
-                      ),
-                  ] else
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Text(
-                          'No detections recorded yet',
-                          style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF7B8EA7)),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: _severityColor(d.severity).withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.warning_amber_rounded,
+                                size: 14,
+                                color: _severityColor(d.severity),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    d.damageType.toUpperCase().replaceAll('_', ' '),
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF334155),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Confidence Rating: ${(d.confidence * 100).toStringAsFixed(0)}%',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _severityColor(d.severity).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                d.severity.toUpperCase(),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                  color: _severityColor(d.severity),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-
-                  const SizedBox(height: 8),
-
-                  // Action buttons
-                  Row(
-                    children: [
-                      // View Report button
-                      if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty))
-                        Expanded(
-                          child: _actionButton(
-                            icon: Icons.picture_as_pdf_rounded,
-                            label: 'View Report',
-                            color: const Color(0xFF2D5096),
-                            onTap: () async {
-                              final pdfPath = p.reportPdfPath;
-                              final pdfUrl = p.reportPdfUrl;
-
-                              if (pdfPath != null && pdfPath.isNotEmpty && File(pdfPath).existsSync()) {
-                                try {
-                                  OpenFilex.open(pdfPath);
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Cannot open report: $e')),
-                                  );
-                                }
-                              } else if (pdfUrl != null && pdfUrl.isNotEmpty) {
-                                final uri = Uri.parse(pdfUrl);
-                                try {
-                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error launching browser: $e')),
-                                  );
-                                }
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Report file is missing')),
-                                );
-                              }
-                            },
+                      )),
+                      if (detections.length > 5)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              '+ ${detections.length - 5} additional anomalies recorded',
+                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                            ),
                           ),
                         ),
-                      if (p.reportPdfPath != null) const SizedBox(width: 10),
-                      // Delete button
-                      Expanded(
-                        child: _actionButton(
-                          icon: Icons.delete_outline_rounded,
-                          label: 'Delete',
-                          color: const Color(0xFFEF4444),
-                          onTap: widget.onDelete,
+                    ] else
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.verified_user_rounded, color: Color(0xFF10B981), size: 32),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Area structure appears stable',
+                                style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
+
+                    const SizedBox(height: 18),
+
+                    // Action buttons
+                    Row(
+                      children: [
+                        // View Report button
+                        if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty))
+                          Expanded(
+                            child: _actionButton(
+                              icon: Icons.description_rounded,
+                              label: 'View Project Report',
+                              color: const Color(0xFF2D5096),
+                              onTap: () async {
+                                final pdfPath = p.reportPdfPath;
+                                final pdfUrl = p.reportPdfUrl;
+
+                                if (pdfPath != null && pdfPath.isNotEmpty && File(pdfPath).existsSync()) {
+                                  try {
+                                    OpenFilex.open(pdfPath);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cannot open report: $e')));
+                                  }
+                                } else if (pdfUrl != null && pdfUrl.isNotEmpty) {
+                                  final uri = Uri.parse(pdfUrl);
+                                  try {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                  }
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report file missing')));
+                                }
+                              },
+                            ),
+                          ),
+                        if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty))
+                          const SizedBox(width: 12),
+                        // Delete button
+                        Expanded(
+                          child: _actionButton(
+                            icon: Icons.delete_sweep_rounded,
+                            label: 'Purge Project',
+                            color: const Color(0xFFEF4444),
+                            onTap: widget.onDelete,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
+              crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 300),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

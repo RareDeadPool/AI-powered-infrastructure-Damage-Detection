@@ -110,7 +110,7 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
       // 2. Fetch Geo-coordinates precisely for this click
       Position? position;
       try {
-        position = await Geolocator.getCurrentPosition(
+          position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.best,
           timeLimit: const Duration(seconds: 3),
         );
@@ -134,7 +134,7 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
           position != null 
-            ? 'Geo-tagged capture saved (${LocationHelper.formatToCardinal(position.latitude, position.longitude)})'
+            ? 'Geo-tagged capture saved (${LocationHelper.formatToProjectCoordinates(position.latitude, position.longitude)})'
             : 'Frame captured without GPS data.',
         ),
         behavior: SnackBarBehavior.floating,
@@ -231,6 +231,8 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
         projectTitle: widget.projectTitle,
         location: widget.location,
         photoResults: _captures,
+        inspectorName: AuthService.currentUser?.displayName ?? "CityScan Inspector",
+        projectSummary: "Consolidated batch anomaly report for ${widget.projectTitle} at ${widget.location}.",
       );
 
       // Update project in Hive with PDF path and detection count

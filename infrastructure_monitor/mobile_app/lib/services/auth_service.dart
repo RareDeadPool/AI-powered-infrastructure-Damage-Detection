@@ -110,4 +110,16 @@ class AuthService {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
+
+  static Future<void> updateProfile({required String fullName, String? phone}) async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await user.updateDisplayName(fullName);
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'fullName': fullName,
+        if (phone != null) 'phone': phone,
+      });
+      await user.reload();
+    }
+  }
 }

@@ -149,93 +149,114 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFBFC),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
         foregroundColor: const Color(0xFF1D2B40),
-        title: Text("Project Setup", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text("PROJECT CONFIGURATION", 
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.5, color: const Color(0xFF7B8EA7))),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 10, 24, 120),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 10),
+            Text(
+              "New Inspection",
+              style: GoogleFonts.outfit(
+                color: const Color(0xFF1D2B40),
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Set up your environment to begin AI-assisted monitoring.",
+              style: GoogleFonts.outfit(
+                color: const Color(0xFF6E7C91),
+                fontSize: 15,
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // Configuration Card
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(32),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 10))
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  )
                 ],
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.architecture_rounded, size: 64, color: Color(0xFF2D5096)),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Define your inspection goals. Named projects help organize AI detection history and PDF reports.",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(color: const Color(0xFF6E7C91), fontSize: 13, height: 1.5),
+                  _buildField(
+                    controller: _titleController,
+                    label: "PROJECT TITLE",
+                    hint: "e.g., Eastern Bridge Phase II",
+                    icon: Icons.edit_note_rounded,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  _buildField(
+                    controller: _locationController,
+                    label: "SITE LOCATION",
+                    hint: "Detecting location...",
+                    icon: Icons.map_outlined,
+                    suffix: _isFetchingLocation
+                        ? const Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF38020))),
+                          )
+                        : IconButton(
+                            icon: const Icon(Icons.gps_fixed_rounded, color: Color(0xFFF38020), size: 20),
+                            onPressed: _fetchAutoLocation,
+                          ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
-            
-            Text("General Information", style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40), letterSpacing: 0.5)),
-            const SizedBox(height: 16),
-
-            _buildField(
-              controller: _titleController,
-              label: "Project Title",
-              hint: "e.g., Highway Section B Review",
-              icon: Icons.engineering_rounded,
-            ),
-            const SizedBox(height: 20),
-            
-            _buildField(
-              controller: _locationController,
-              label: "Geographic Location",
-              hint: "e.g., Subhash Road, Mumbai",
-              icon: Icons.location_on_rounded,
-              suffix: _isFetchingLocation
-                  ? const Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF38020))),
-                    )
-                  : IconButton(
-                      icon: const Icon(Icons.my_location_rounded, color: Color(0xFFF38020)),
-                      onPressed: _fetchAutoLocation,
-                    ),
-            ),
             
             const SizedBox(height: 40),
             
-            Text("Select Inspection Type", style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40), letterSpacing: 0.5)),
+            Text(
+              "SELECT MODE", 
+              style: GoogleFonts.outfit(
+                fontSize: 11, 
+                fontWeight: FontWeight.bold, 
+                color: const Color(0xFFF38020), 
+                letterSpacing: 1.2
+              )
+            ),
             const SizedBox(height: 16),
 
-            _buildModeCard(
-              title: "Project-Based Batch Inspection",
-              subtitle: "Live scanning where damages are added into a single report one by one.",
-              icon: Icons.collections_rounded,
+            _buildActionCard(
+              title: "AI Project Inspection",
+              subtitle: "Capture multiple site photos. Our AI will automatically tag, track, and generate a comprehensive structural report.",
+              icon: Icons.camera_enhance_rounded,
               color: const Color(0xFF2D5096),
               onTap: _startBatchMode,
-              isPremium: true,
+              tag: "RECOMMENDED",
             ),
             
-            const SizedBox(height: 16),
-
-            _buildModeCard(
-              title: "Rapid Edge Scanner",
-              subtitle: "Real-time AI detection in a single high-speed session.",
-              icon: Icons.videocam_rounded,
-              color: const Color(0xFFF38020),
-              onTap: _startInspection,
-            ),
+            const SizedBox(height: 32),
             
-            const SizedBox(height: 40),
+            Center(
+              child: Text(
+                "Version 26.0 Build  •  Advanced Asset Management",
+                style: GoogleFonts.outfit(fontSize: 10, color: const Color(0xFFCBD5E0), fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
       ),
@@ -246,82 +267,87 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF7B8EA7))),
-        const SizedBox(height: 8),
+        Text(label, style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF7B8EA7), letterSpacing: 1)),
+        const SizedBox(height: 12),
         TextField(
           controller: controller,
-          style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: const Color(0xFF1D2B40)),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.outfit(color: const Color(0xFFCBD5E0), fontWeight: FontWeight.normal),
-            prefixIcon: Icon(icon, color: const Color(0xFF2D5096), size: 20),
+            prefixIcon: Icon(icon, color: const Color(0xFF2D5096), size: 22),
             suffixIcon: suffix,
             filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade100)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade100)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2D5096))),
+            fillColor: const Color(0xFFF8FAFC),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF2D5096), width: 1)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildModeCard({required String title, required String subtitle, required IconData icon, required Color color, required VoidCallback onTap, bool isPremium = false}) {
+  Widget _buildActionCard({required String title, required String subtitle, required IconData icon, required Color color, required VoidCallback onTap, String? tag}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: isPremium ? Border.all(color: color.withOpacity(0.3), width: 1.5) : null,
+          gradient: LinearGradient(
+            colors: [color, color.withOpacity(0.8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(32),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+            BoxShadow(color: color.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            title,
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                        if (isPremium) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-                            child: const Text("BATCH", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                          )
-                        ]
-                      ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 32),
+                ),
+                if (tag != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7), fontSize: 12, height: 1.4)),
-                ],
-              ),
+                    child: Text(tag, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                  ),
+              ],
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFCBD5E0), size: 16),
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Text("PROCEED TO SCAN", style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5)),
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+              ],
+            ),
           ],
         ),
       ),

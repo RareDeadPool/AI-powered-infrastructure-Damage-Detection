@@ -13,6 +13,14 @@ class LocationHelper {
     return '${absLat.toStringAsFixed(6)}° $latDirection, ${absLon.toStringAsFixed(6)}° $lonDirection';
   }
 
+  /// Formats for "East-West coordinate system" as requested for projects
+  static String formatToProjectCoordinates(double latitude, double longitude) {
+    String eastingSuffix = longitude >= 0 ? 'E' : 'W';
+    String northingSuffix = latitude >= 0 ? 'N' : 'S';
+    
+    return 'Easting: ${longitude.abs().toStringAsFixed(6)} $eastingSuffix, Northing: ${latitude.abs().toStringAsFixed(6)} $northingSuffix';
+  }
+
   /// Detailed Cardinal formatting including North, East, West, South explicitly
   static Map<String, String> getCardinalComponents(double latitude, double longitude) {
     return {

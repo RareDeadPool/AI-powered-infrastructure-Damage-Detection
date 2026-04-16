@@ -11,6 +11,7 @@ import '../services/report_service.dart';
 import '../models/recognition.dart';
 import '../models/detection_model.dart';
 import '../repositories/project_repository.dart';
+import '../services/auth_service.dart';
 import 'package:uuid/uuid.dart';
 
 class InspectionScreen extends StatefulWidget {
@@ -149,7 +150,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(position != null 
-            ? "Damage Captured at ${LocationHelper.formatToCardinal(position.latitude, position.longitude)}"
+            ? "Damage Captured at ${LocationHelper.formatToProjectCoordinates(position.latitude, position.longitude)}"
             : "Damage Detection Captured!"),
           backgroundColor: AppColors.secondary,
           duration: const Duration(seconds: 2),
@@ -279,7 +280,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
                                   const Icon(Icons.gps_fixed, color: Colors.white, size: 12),
                                   const SizedBox(width: 6),
                                   Text(
-                                    LocationHelper.formatToCardinal(_captureLat!, _captureLng!),
+                                    LocationHelper.formatToProjectCoordinates(_captureLat!, _captureLng!),
                                     style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                                   ),
                                 ],
@@ -323,6 +324,8 @@ class _InspectionScreenState extends State<InspectionScreen> {
                                 location: widget.location,
                                 detections: _savedDetections,
                                 imagePath: _capturedImagePath!,
+                                inspectorName: AuthService.currentUser?.displayName ?? "CityScan Inspector",
+                                projectSummary: "Infrastructure assessment for ${widget.projectTitle} at ${widget.location}.",
                                 lat: _captureLat,
                                 lng: _captureLng,
                               );

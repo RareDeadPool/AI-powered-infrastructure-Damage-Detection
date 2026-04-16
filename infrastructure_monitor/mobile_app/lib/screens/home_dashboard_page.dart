@@ -212,25 +212,86 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
-class VitalityCard extends StatelessWidget {
+class VitalityCard extends StatefulWidget {
   final bool isOnline;
   const VitalityCard({super.key, required this.isOnline});
 
   @override
+  State<VitalityCard> createState() => _VitalityCardState();
+}
+
+class _VitalityCardState extends State<VitalityCard> {
+  late bool _displayOnline;
+  Timer? _bufferTimer;
+
+  // Real stats
+  int _projectCount = 0;
+  int _detectionCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayOnline = widget.isOnline;
+    _fetchStats();
+  }
+
+  @override
+  void didUpdateWidget(VitalityCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isOnline != widget.isOnline) {
+      // Buffer of 3s to help user notice the change
+      _bufferTimer?.cancel();
+      _bufferTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _displayOnline = widget.isOnline;
+          });
+        }
+      });
+    }
+  }
+
+  Future<void> _fetchStats() async {
+    final userId = AuthService.currentUser?.uid ?? '';
+    final projects = ProjectRepository.getProjectsForUser(userId);
+    final allDetections = ProjectRepository.getAllDetections();
+    
+    if (mounted) {
+      setState(() {
+        _projectCount = projects.length;
+        _detectionCount = allDetections.length;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _bufferTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
+    // Online = Greenish, Offline = Blueish (as per user request)
+    final List<Color> bgColors = _displayOnline 
+      ? [const Color(0xFF10B981), const Color(0xFF34D399)] // Green
+      : [const Color(0xFF2D5096), const Color(0xFF4F85F3)]; // Blue
+
+    return AnimatedContainer(
+      duration: const Duration(seconds: 1),
+      curve: Curves.easeInOut,
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2D5096), Color(0xFF4F85F3)],
+        gradient: LinearGradient(
+          colors: bgColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2D5096).withOpacity(0.3),
+            color: bgColors[0].withOpacity(0.35),
             blurRadius: 25,
             offset: const Offset(0, 12),
           ),
@@ -242,36 +303,39 @@ class VitalityCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'LIVE INFRASTRUCTURE HEALTH',
-                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'LIVE INFRASTRUCTURE HEALTH',
+                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               // Connectivity Bubble
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isOnline ? const Color(0xFF4ED39A).withOpacity(0.9) : const Color(0xFF558AFA).withOpacity(0.9),
+                  color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                      widget.isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
                       color: Colors.white,
                       size: 10,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isOnline ? 'Online Mode' : 'Offline Mode',
+                      widget.isOnline ? 'ONLINE' : 'OFFLINE',
                       style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -282,25 +346,19 @@ class VitalityCard extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'Welcome Back,',
-            style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.8), fontSize: 16),
+            style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 16),
           ),
           Text(
-            'System Inspector',
+            AuthService.currentUser?.displayName ?? 'System Inspector',
             style: GoogleFonts.outfit(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 24),
           Row(
             children: [
-              _buildStat('98.2%', 'Accuracy'),
-              const SizedBox(width: 24),
-              FutureBuilder<int>(
-                future: Future.value(ProjectRepository.getProjectsForUser(AuthService.currentUser?.uid ?? '').length),
-                builder: (context, snapshot) {
-                  return _buildStat(snapshot.data?.toString() ?? '...', 'Projects');
-                },
-              ),
-              const SizedBox(width: 24),
-              _buildStat(isOnline ? 'Cloud' : 'Local', 'Target'),
+              Expanded(child: _buildStat(_detectionCount.toString(), 'Detections')),
+              Expanded(child: _buildStat(_projectCount.toString(), 'Projects')),
+              Expanded(child: _buildStat(_displayOnline ? 'Active' : 'Standby', 'Sync State')),
+              Expanded(child: _buildStat('v26.0', 'Build')),
             ],
           ),
         ],
@@ -313,7 +371,7 @@ class VitalityCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(value, style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-        Text(label, style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w500)),
+        Text(label, style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.7), fontSize: 10, fontWeight: FontWeight.w500)),
       ],
     );
   }

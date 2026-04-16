@@ -21,6 +21,7 @@ class HomeDashboardPage extends StatefulWidget {
 
 class _HomeDashboardPageState extends State<HomeDashboardPage> {
   bool _isOnline = true;
+  bool _showAllInspections = false;
   StreamSubscription? _connectivitySubscription;
 
   @override
@@ -106,7 +107,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
           ValueListenableBuilder(
             valueListenable: DatabaseService.projectsBox.listenable(),
             builder: (context, Box<Project> box, _) {
-              final projects = ProjectRepository.getProjectsForUser(AuthService.currentUser?.uid ?? '');
+              final allProjects = ProjectRepository.getProjectsForUser(AuthService.currentUser?.uid ?? '');
+              final projects = _showAllInspections ? allProjects : allProjects.take(5).toList();
               
               if (projects.isEmpty) {
                 return const SliverToBoxAdapter(
@@ -122,49 +124,86 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
               return SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final project = projects[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
+                  delegate: SliverChildListDelegate([
+                    ...projects.map((project) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0F4F8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.description_outlined, color: Color(0xFF2D5096)),
+                          ),
+                          title: Text(project.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                          subtitle: Text(project.location, style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey)),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('${project.detectionCount} items', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFF38020))),
+                              Text(project.isSynced ? 'Cloud Synced' : 'Offline Mode', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey)),
                             ],
                           ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            leading: Container(
-                              padding: const EdgeInsets.all(10),
+                        ),
+                      ),
+                    )).toList(),
+                    
+                    if (allProjects.length > 5)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 20),
+                        child: Center(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _showAllInspections = !_showAllInspections;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF0F4F8),
+                                border: Border.all(color: const Color(0xFFEDF2F7)),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(Icons.description_outlined, color: Color(0xFF2D5096)),
-                            ),
-                            title: Text(project.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-                            subtitle: Text(project.location, style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey)),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text('${project.detectionCount} items', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFF38020))),
-                                Text(project.isSynced ? 'Cloud Synced' : 'Offline Mode', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey)),
-                              ],
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _showAllInspections ? 'Show Less' : 'See More (${allProjects.length - 5} others)',
+                                    style: GoogleFonts.outfit(
+                                      color: const Color(0xFF2D5096),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    _showAllInspections ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                    size: 18,
+                                    color: const Color(0xFF2D5096),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      );
-                    },
-                    childCount: projects.length,
-                  ),
+                      ),
+                  ]),
                 ),
               );
             },

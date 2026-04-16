@@ -31,49 +31,50 @@ class BrandHeader extends StatelessWidget {
               ),
             ],
           ),
-          Row(
-            children: [
-              _buildHeaderIcon(
-                context,
-                icon: Icons.sync_rounded, 
-                onTap: () async {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Syncing Data...'), behavior: SnackBarBehavior.floating),
-                  );
-                  await SyncManager.syncData();
-                }
+          PopupMenuButton<String>(
+            offset: const Offset(0, 45),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            onSelected: (value) async {
+              if (value == 'sync') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Syncing Data...'), behavior: SnackBarBehavior.floating),
+                );
+                await SyncManager.syncData();
+              } else if (value == 'signout') {
+                await AuthService.signOut();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'sync',
+                child: Row(
+                  children: [
+                    const Icon(Icons.sync_rounded, color: Color(0xFF2D5096), size: 20),
+                    const SizedBox(width: 12),
+                    Text('Sync Data', style: GoogleFonts.outfit(fontWeight: FontWeight.w500)),
+                  ],
+                ),
               ),
-              const SizedBox(width: 10),
-              _buildHeaderIcon(
-                context,
-                icon: Icons.logout_rounded, 
-                onTap: () => AuthService.signOut()
-              ),
-              const SizedBox(width: 12),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: const Color(0xFFEEF2F6),
-                child: const Icon(Icons.person_rounded, color: Color(0xFF7B8EA7), size: 22),
+              PopupMenuItem(
+                value: 'signout',
+                child: Row(
+                  children: [
+                    const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 20),
+                    const SizedBox(width: 12),
+                    Text('Sign Out', style: GoogleFonts.outfit(fontWeight: FontWeight.w500, color: const Color(0xFFEF4444))),
+                  ],
+                ),
               ),
             ],
-          )
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: const Color(0xFFEEF2F6),
+              child: const Icon(Icons.person_rounded, color: Color(0xFF7B8EA7), size: 22),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderIcon(BuildContext context, {required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFEDF2F7)),
-        ),
-        child: Icon(icon, color: const Color(0xFF7B8EA7), size: 20),
-      ),
-    );
-  }
 }

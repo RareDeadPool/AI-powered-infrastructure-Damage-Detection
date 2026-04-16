@@ -12,6 +12,13 @@ class AuthService {
 
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  static Future<Map<String, dynamic>?> getUserData() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    return doc.data();
+  }
+
   static Future<User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -109,5 +116,22 @@ class AuthService {
   static Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
+  }
+
+  static Future<void> updateProfile({String? fullName, String? phone}) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    if (fullName != null) {
+      await user.updateDisplayName(fullName);
+    }
+
+    if (phone != null || fullName != null) {
+      final updates = <String, dynamic>{};
+      if (fullName != null) updates['fullName'] = fullName;
+      if (phone != null) updates['phone'] = phone;
+      
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updates);
+    }
   }
 }

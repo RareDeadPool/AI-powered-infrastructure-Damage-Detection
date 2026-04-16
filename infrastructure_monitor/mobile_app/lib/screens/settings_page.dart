@@ -22,8 +22,8 @@ class _SettingsPageState extends State<SettingsPage> {
   };
   double _iouThreshold = 0.45;
   bool _isLoading = true;
-  
   bool _autoSync = true;
+  Map<String, dynamic>? _userData;
 
   @override
   void initState() {
@@ -33,21 +33,27 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    
     setState(() {
       _thresholds['pothole'] = prefs.getDouble('conf_pothole') ?? 0.15;
       _thresholds['crack'] = prefs.getDouble('conf_crack') ?? 0.15;
       _thresholds['pipeline_leak'] = prefs.getDouble('conf_pipeline_leak') ?? 0.15;
       _thresholds['corrosion'] = prefs.getDouble('conf_corrosion') ?? 0.15;
       _iouThreshold = prefs.getDouble('iou_threshold') ?? 0.45;
-      
       _autoSync = prefs.getBool('auto_sync') ?? true;
 
       // Update the service static variables
       DetectorService.categoryThresholds = Map.from(_thresholds);
       DetectorService.iouThreshold = _iouThreshold;
-      
-      _isLoading = false;
     });
+
+    final userData = await AuthService.getUserData();
+    if (mounted) {
+      setState(() {
+        _userData = userData;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveConfidence(String key, double val) async {
@@ -79,7 +85,7 @@ class _SettingsPageState extends State<SettingsPage> {
       'pipeline_leak': 0.15,
       'corrosion': 0.15,
     };
-    final iouDefault = 0.45;
+    const iouDefault = 0.45;
 
     final prefs = await SharedPreferences.getInstance();
     for (var entry in defaults.entries) {
@@ -94,9 +100,11 @@ class _SettingsPageState extends State<SettingsPage> {
       DetectorService.iouThreshold = iouDefault;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('AI Calibration reset to defaults')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI Calibration reset to defaults')),
+      );
+    }
   }
 
   Future<void> _clearCache() async {
@@ -157,12 +165,13 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 👤 PROFILE HEADER
-                  _buildProfileHeader(displayName, email),
+                  GestureDetector(
+                    onTap: _showEditProfileDialog,
+                    child: _buildProfileHeader(displayName, email),
+                  ),
                   
                   const SizedBox(height: 32),
 
-                  // 📱 APP SETTINGS SECTION
                   _buildSectionHeader('APPLICATION SETTINGS'),
                   _buildSettingCard(
                     child: Column(
@@ -180,7 +189,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
                   const SizedBox(height: 32),
 
-                  // 🤖 AI CALIBRATION SECTION
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -234,7 +242,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
                   const SizedBox(height: 32),
 
-                  // 🔒 ACCOUNT & LEGAL SECTION
                   _buildSectionHeader('ACCOUNT & SECURITY'),
                   _buildSettingCard(
                     child: Column(
@@ -273,6 +280,103 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  void _showEditProfileDialog() {
+    final nameController = TextEditingController(text: AuthService.currentUser?.displayName ?? '');
+    final phoneController = TextEditingController(text: _userData?['phone'] ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            left: 24,
+            right: 24,
+            top: 24,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Edit Profile', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40))),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildFieldLabel('Full Name'),
+              const SizedBox(height: 8),
+              _buildTextField(nameController, 'e.g., John Doe', Icons.person_outline_rounded),
+              const SizedBox(height: 20),
+              _buildFieldLabel('Phone Number'),
+              const SizedBox(height: 8),
+              _buildTextField(phoneController, 'e.g., +91 9876543210', Icons.phone_android_rounded),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await AuthService.updateProfile(
+                      fullName: nameController.text.trim(),
+                      phone: phoneController.text.trim(),
+                    );
+                    if (mounted) {
+                      await _loadSettings();
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Profile updated successfully!'), behavior: SnackBarBehavior.floating),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2D5096),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: Text('Save Changes', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldLabel(String label) {
+    return Text(label, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF475569)));
+  }
+
+  Widget _buildTextField(TextEditingController controller, String hint, IconData icon) {
+    return TextField(
+      controller: controller,
+      style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontWeight: FontWeight.normal),
+        prefixIcon: Icon(icon, color: const Color(0xFF2D5096), size: 20),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2D5096), width: 1.5)),
+      ),
+    );
+  }
+
   Widget _buildProfileHeader(String name, String email) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -291,10 +395,10 @@ class _SettingsPageState extends State<SettingsPage> {
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFF2D5096).withOpacity(0.1), width: 2),
             ),
-            child: CircleAvatar(
+            child: const CircleAvatar(
               radius: 40,
-              backgroundImage: const AssetImage('assets/inspector_avatar.png'),
-              backgroundColor: Colors.grey.shade100,
+              backgroundColor: Color(0xFFEFF6FF),
+              child: Icon(Icons.person_rounded, size: 40, color: Color(0xFF2D5096)),
             ),
           ),
           const SizedBox(width: 20),
@@ -310,10 +414,17 @@ class _SettingsPageState extends State<SettingsPage> {
                   email,
                   style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF7B8EA7)),
                 ),
+                if (_userData?['phone'] != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _userData!['phone'],
+                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                  ),
+                ],
               ],
             ),
           ),
-          const Icon(Icons.edit_note_rounded, color: Color(0xFFCBD5E0)),
+          const Icon(Icons.edit_note_rounded, color: Color(0xFF2D5096)),
         ],
       ),
     );

@@ -60,7 +60,7 @@ flutter:
 
   assets:
     - assets/models/final_model.tflite
-    - assets/cityscan_logo.png
+    - assets/brand/logo.png
     - assets/pothole_detection.png
     - assets/pipeline_monitoring.png
     - assets/crack_analysis.png

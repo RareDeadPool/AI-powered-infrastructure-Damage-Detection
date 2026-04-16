@@ -46,7 +46,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
@@ -103,7 +102,6 @@ class CustomBottomTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomAppBar(
-      height: 80,
       color: Colors.white.withOpacity(0.95),
       elevation: 20,
       shadowColor: Colors.black12,

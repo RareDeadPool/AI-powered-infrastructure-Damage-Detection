@@ -115,16 +115,27 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Create Account',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
+                const SizedBox(height: 20),
+                Center(child: Image.asset('assets/brand/logo.png', height: 60)),
+                const SizedBox(height: 16),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                    children: [
+                      const TextSpan(text: 'City', style: TextStyle(color: Color(0xFFF38020))),
+                      const TextSpan(text: 'Scan', style: TextStyle(color: Color(0xFF2D5096))),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Join the engineering network',
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 32),

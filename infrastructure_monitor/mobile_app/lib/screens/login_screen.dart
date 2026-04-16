@@ -63,16 +63,21 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 60),
-                const Icon(Icons.engineering, size: 80, color: AppColors.primary),
+                Image.asset('assets/brand/logo.png', height: 80),
                 const SizedBox(height: 24),
-                Text(
-                  AppConstants.appName,
+                RichText(
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
-                      ),
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                    children: [
+                      const TextSpan(text: 'City', style: TextStyle(color: Color(0xFFF38020))),
+                      const TextSpan(text: 'Scan', style: TextStyle(color: Color(0xFF2D5096))),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(

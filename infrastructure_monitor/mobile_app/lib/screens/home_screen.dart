@@ -318,7 +318,7 @@ class HeaderWidget extends StatelessWidget {
         children: [
           Row(
             children: [
-              Image.asset('assets/cityscan_logo.png', height: 32),
+              Image.asset('assets/brand/logo.png', height: 32),
               const SizedBox(width: 8),
               RichText(
                 text: TextSpan(

@@ -8,9 +8,9 @@ import '../services/database_service.dart';
 import '../services/auth_service.dart';
 import '../services/sync_manager.dart';
 import '../repositories/project_repository.dart';
+import '../widgets/brand_header.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:io';
 
 class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});
@@ -82,9 +82,12 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       bottom: false,
       child: Column(
         children: [
-          // Header with Upload To Cloud button
+          // Global Brand Header
+          const BrandHeader(),
+
+          // Local Screen Header with Upload To Cloud button
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 12, 0),
+            padding: const EdgeInsets.fromLTRB(20, 0, 12, 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -183,7 +186,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 6),
 
           // Project list
           Expanded(

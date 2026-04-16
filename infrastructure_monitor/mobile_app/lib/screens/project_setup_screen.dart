@@ -296,19 +296,26 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   Row(
-                     children: [
-                       Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-                       if (isPremium) ...[
-                         const SizedBox(width: 8),
-                         Container(
-                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                           decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-                           child: const Text("BATCH", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                         )
-                       ]
-                     ],
-                   ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        if (isPremium) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+                            child: const Text("BATCH", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+                          )
+                        ]
+                      ],
+                    ),
                   const SizedBox(height: 4),
                   Text(subtitle, style: GoogleFonts.outfit(color: const Color(0xFF7B8EA7), fontSize: 12, height: 1.4)),
                 ],

@@ -8,6 +8,7 @@ import '../services/sync_manager.dart';
 import '../repositories/project_repository.dart';
 import '../models/project_model.dart';
 import 'project_setup_screen.dart';
+import '../widgets/brand_header.dart';
 
 class HomeDashboardPage extends StatelessWidget {
   const HomeDashboardPage({super.key});
@@ -18,7 +19,7 @@ class HomeDashboardPage extends StatelessWidget {
       bottom: false,
       child: CustomScrollView(
         slivers: [
-          const SliverToBoxAdapter(child: HeaderWidget()),
+          const SliverToBoxAdapter(child: BrandHeader()),
           const SliverToBoxAdapter(child: VitalityCard()),
           const SliverToBoxAdapter(child: SectionTitle(label: 'SPECIALIZED ANALYSIS', title: 'Detection Modules')),
           
@@ -98,114 +99,73 @@ class HomeDashboardPage extends StatelessWidget {
                                 color: Colors.black.withOpacity(0.03),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
-                              )
+                              ),
                             ],
                           ),
                           child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             leading: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF0F4F8),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(Icons.architecture, color: const Color(0xFF2D5096)),
+                              child: const Icon(Icons.description_outlined, color: Color(0xFF2D5096)),
                             ),
                             title: Text(project.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
-                            subtitle: Text(project.createdAt.toString().split(' ')[0], style: GoogleFonts.outfit(fontSize: 12)),
-                            trailing: Icon(
-                              project.isSynced ? Icons.cloud_done : Icons.cloud_off,
-                              color: project.isSynced ? Colors.green : Colors.grey,
+                            subtitle: Text(project.location, style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey)),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('${project.detectionCount} items', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFF38020))),
+                                Text(project.isSynced ? 'Cloud Synced' : 'Offline Mode', style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey)),
+                              ],
                             ),
                           ),
                         ),
                       );
                     },
-                    childCount: projects.length > 5 ? 5 : projects.length, // Limit to 5 on home
+                    childCount: projects.length,
                   ),
                 ),
               );
             },
           ),
-
-          const SliverPadding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 100),
-            sliver: SliverToBoxAdapter(child: StartInspectionButton()),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
     );
   }
 }
 
-class HeaderWidget extends StatelessWidget {
-  const HeaderWidget({super.key});
+class SectionTitle extends StatelessWidget {
+  final String label;
+  final String title;
+
+  const SectionTitle({
+    super.key,
+    required this.label,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.fromLTRB(20, 30, 20, 15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Image.asset('assets/cityscan_logo.png', height: 32),
-              const SizedBox(width: 8),
-              RichText(
-                text: TextSpan(
-                  style: GoogleFonts.outfit(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  children: const [
-                    TextSpan(text: 'City', style: TextStyle(color: Color(0xFFF38020))),
-                    TextSpan(text: 'Scan', style: TextStyle(color: Color(0xFF2D5096))),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            label,
+            style: GoogleFonts.outfit(color: const Color(0xFFF38020), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
           ),
-          Row(
-            children: [
-              _buildHeaderIcon(
-                icon: Icons.sync_rounded, 
-                onTap: () async {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Syncing Data...'), behavior: SnackBarBehavior.floating),
-                  );
-                  await SyncManager.syncData();
-                }
-              ),
-              const SizedBox(width: 10),
-              _buildHeaderIcon(
-                icon: Icons.logout_rounded, 
-                onTap: () => AuthService.signOut()
-              ),
-              const SizedBox(width: 12),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: const Color(0xFFEEF2F6),
-                child: const Icon(Icons.person_rounded, color: Color(0xFF7B8EA7), size: 22),
-              ),
-            ],
-          )
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: GoogleFonts.outfit(color: const Color(0xFF1D2B40), fontSize: 22, fontWeight: FontWeight.w800),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderIcon({required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFEDF2F7)),
-        ),
-        child: Icon(icon, color: const Color(0xFF7B8EA7), size: 20),
       ),
     );
   }
@@ -249,65 +209,36 @@ class VitalityCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          Text(
+            'Welcome Back,',
+            style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.8), fontSize: 16),
+          ),
+          Text(
+            'System Inspector',
+            style: GoogleFonts.outfit(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 24),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                '98.4',
-                style: GoogleFonts.outfit(color: Colors.white, fontSize: 56, fontWeight: FontWeight.w800, height: 1),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6, left: 4),
-                child: Text('%', style: GoogleFonts.outfit(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Global Vitality\nIndex',
-                    style: TextStyle(color: Colors.white, fontSize: 13, height: 1.2, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ),
+              _buildStat('98.2%', 'Accuracy'),
+              const SizedBox(width: 24),
+              _buildStat('24', 'Projs'),
+              const SizedBox(width: 24),
+              _buildStat('Offline', 'Mode'),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            'System AI has identified 3 minor anomalies recently. Data is fully synced and stored locally.',
-            style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 13, height: 1.4, fontWeight: FontWeight.w300),
-          )
         ],
       ),
     );
   }
-}
 
-class SectionTitle extends StatelessWidget {
-  final String label;
-  final String title;
-
-  const SectionTitle({super.key, required this.label, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: GoogleFonts.outfit(color: const Color(0xFFF38020), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-              const SizedBox(height: 4),
-              Text(title, style: GoogleFonts.outfit(color: const Color(0xFF1D2B40), fontSize: 22, fontWeight: FontWeight.w800)),
-            ],
-          ),
-          Text('View All', style: GoogleFonts.outfit(color: const Color(0xFF3B82F6), fontSize: 14, fontWeight: FontWeight.w600)),
-        ],
-      ),
+  Widget _buildStat(String value, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(value, style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(label, style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.w500)),
+      ],
     );
   }
 }
@@ -333,103 +264,87 @@ class ModuleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(iconData, color: iconColor, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: GoogleFonts.outfit(color: const Color(0xFF1D2B40), fontSize: 18, fontWeight: FontWeight.w700)),
-                    Text(description, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.outfit(color: const Color(0xFF6E7C91), fontSize: 13)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFCBD5E0), size: 16),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.asset(
-              imagePath,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Image
+            SizedBox(
+              height: 180,
               width: double.infinity,
-              height: 160,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 140,
-                color: Colors.grey.shade100,
-                child: const Icon(Icons.image_not_supported, color: Colors.grey),
+              child: Image.asset(
+                imagePath,
+                fit: BoxFit.cover,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class StartInspectionButton extends StatelessWidget {
-  const StartInspectionButton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2D5096), Color(0xFF4F85F3)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFF2D5096).withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8)),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProjectSetupScreen()));
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.add_location_alt_rounded, color: Colors.white, size: 22),
-                const SizedBox(width: 10),
-                Text(
-                  'NEW INSPECTION PROJECT',
-                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                ),
-              ],
+            
+            // Bottom Content
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.outfit(
+                      color: const Color(0xFF1D2B40),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: GoogleFonts.outfit(
+                      color: const Color(0xFF7B8EA7),
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Icon(iconData, size: 16, color: iconColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        'MODULAR',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1D2B40),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Icon(Icons.bolt, size: 16, color: Color(0xFFF38020)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'AI READY',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1D2B40),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

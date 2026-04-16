@@ -43,6 +43,7 @@ dependencies:
   url_launcher: ^6.3.2
   google_maps_flutter: ^2.17.0
   fl_chart: ^1.2.0
+  syncfusion_flutter_pdf: ^33.1.49
 
 dependency_overrides:
   # Pin path_provider_foundation to a version that does NOT use

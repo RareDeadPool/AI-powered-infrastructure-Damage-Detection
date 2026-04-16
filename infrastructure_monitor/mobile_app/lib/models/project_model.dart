@@ -31,6 +31,9 @@ class Project extends HiveObject {
   @HiveField(8)
   int detectionCount;
 
+  @HiveField(9)
+  String? isCorrect;
+
   Project({
     required this.id,
     required this.name,
@@ -41,6 +44,7 @@ class Project extends HiveObject {
     this.reportPdfPath,
     this.reportPdfUrl,
     this.detectionCount = 0,
+    this.isCorrect,
   });
 
   Map<String, dynamic> toMap() {
@@ -53,6 +57,7 @@ class Project extends HiveObject {
       'location': location,
       'reportPdfUrl': reportPdfUrl,
       'detectionCount': detectionCount,
+      'isCorrect': isCorrect,
     };
   }
 
@@ -66,6 +71,7 @@ class Project extends HiveObject {
       location: map['location'] ?? '',
       reportPdfUrl: map['reportPdfUrl'],
       detectionCount: map['detectionCount'] ?? 0,
+      isCorrect: map['isCorrect'],
     );
   }
 }

@@ -26,13 +26,14 @@ class ProjectAdapter extends TypeAdapter<Project> {
       reportPdfPath: fields[6] as String?,
       reportPdfUrl: fields[7] as String?,
       detectionCount: fields[8] as int,
+      isCorrect: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Project obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class ProjectAdapter extends TypeAdapter<Project> {
       ..writeByte(7)
       ..write(obj.reportPdfUrl)
       ..writeByte(8)
-      ..write(obj.detectionCount);
+      ..write(obj.detectionCount)
+      ..writeByte(9)
+      ..write(obj.isCorrect);
   }
 
   @override

@@ -7,7 +7,14 @@ class Recognition {
   final Rect location;
   final double areaPct;
 
-  Recognition(this.id, this.label, this.score, this.location, this.areaPct);
+  // FIX: Converted to named parameters for compatibility with calls in InspectionScreen
+  Recognition({
+    required this.id,
+    required this.label,
+    required this.score,
+    required this.location,
+    required this.areaPct,
+  });
 
   String get severity {
     if (areaPct >= 8.0) return "🔴 High";

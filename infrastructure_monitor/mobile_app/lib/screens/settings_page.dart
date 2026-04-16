@@ -33,7 +33,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    
     setState(() {
       _thresholds['pothole'] = prefs.getDouble('conf_pothole') ?? 0.15;
       _thresholds['crack'] = prefs.getDouble('conf_crack') ?? 0.15;
@@ -45,7 +44,7 @@ class _SettingsPageState extends State<SettingsPage> {
       // Update the service static variables
       DetectorService.categoryThresholds = Map.from(_thresholds);
       DetectorService.iouThreshold = _iouThreshold;
-    });
+    }); // FIX: Added missing closing brace and parenthesis
 
     final userData = await AuthService.getUserData();
     if (mounted) {

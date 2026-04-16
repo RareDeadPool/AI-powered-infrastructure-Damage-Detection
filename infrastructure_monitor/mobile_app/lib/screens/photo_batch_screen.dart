@@ -34,12 +34,14 @@ class PhotoBatchScreen extends StatefulWidget {
   final String projectId;
   final String projectTitle;
   final String location;
+  final bool isResuming;
 
   const PhotoBatchScreen({
     super.key,
     required this.projectId,
     required this.projectTitle,
     required this.location,
+    this.isResuming = false,
   });
 
   @override
@@ -226,19 +228,45 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
         }
       }
 
-      // Generate and save PDF report locally
-      final pdfPath = await ReportService.generateAndSaveBatchReport(
-        projectTitle: widget.projectTitle,
-        location: widget.location,
-        photoResults: _captures,
-      );
-
-      // Update project in Hive with PDF path and detection count
+      // Get existing project BEFORE modifying
       final project = ProjectRepository.getProjectById(widget.projectId);
+
+      String? pdfPath;
+      if (widget.isResuming && project != null) {
+        // RESUME MODE: merge new captures into existing PDF
+        final existingPhotoCount = project.detectionCount > 0
+            ? (project.detectionCount ~/ (_captures.isEmpty ? 1 : 1)) // best estimate from count
+            : 0;
+        pdfPath = await ReportService.generateAndSaveBatchReportMerged(
+          projectTitle: widget.projectTitle,
+          location: widget.location,
+          photoResults: _captures,
+          existingPhotoCount: existingPhotoCount,
+          existingPdfPath: project.reportPdfPath,
+          existingPdfUrl: project.reportPdfUrl,
+        );
+      } else {
+        // FRESH MODE: generate new PDF from scratch
+        pdfPath = await ReportService.generateAndSaveBatchReport(
+          projectTitle: widget.projectTitle,
+          location: widget.location,
+          photoResults: _captures,
+        );
+      }
+
+      // Update project in Hive
       if (project != null) {
         project.reportPdfPath = pdfPath;
-        project.detectionCount = totalDmg;
+        // On resume, add to existing detection count; on fresh, replace it
+        project.detectionCount = widget.isResuming
+            ? project.detectionCount + totalDmg
+            : totalDmg;
         await ProjectRepository.saveProject(project);
+      }
+
+      // Show review sheet after successful generation
+      if (mounted) {
+        await _showReviewSheet();
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -247,6 +275,16 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
+  }
+
+  Future<void> _showReviewSheet() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      builder: (ctx) => _ReviewSheet(projectId: widget.projectId),
+    );
   }
 
   @override
@@ -263,8 +301,14 @@ class _PhotoBatchScreenState extends State<PhotoBatchScreen> {
             Text(widget.projectTitle,
                 style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
                 overflow: TextOverflow.ellipsis),
-            Text('Geo-Tagging Active',
-                style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF4ED39A), fontWeight: FontWeight.bold)),
+            Text(
+              widget.isResuming ? '▶ Resuming Session' : 'Geo-Tagging Active',
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                color: widget.isResuming ? const Color(0xFF10B981) : const Color(0xFF4ED39A),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -643,4 +687,155 @@ class _BatchDetectionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BatchDetectionPainter old) => true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI DETECTION REVIEW SHEET
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ReviewSheet extends StatefulWidget {
+  final String projectId;
+  const _ReviewSheet({required this.projectId});
+
+  @override
+  State<_ReviewSheet> createState() => _ReviewSheetState();
+}
+
+class _ReviewSheetState extends State<_ReviewSheet> {
+  String? _selected;
+  bool _saving = false;
+
+  Future<void> _submit() async {
+    if (_selected == null) return;
+    setState(() => _saving = true);
+
+    final project = ProjectRepository.getProjectById(widget.projectId);
+    if (project != null) {
+      project.isCorrect = _selected;
+      await ProjectRepository.saveProject(project);
+    }
+
+    if (mounted) Navigator.pop(context);
+  }
+
+  Widget _chip(String value, String label, IconData icon, Color accent) {
+    final isSelected = _selected == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selected = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? accent.withOpacity(0.12) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? accent : const Color(0xFFE2E8F0),
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: accent.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))]
+              : [],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isSelected ? accent : const Color(0xFF94A3B8), size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: isSelected ? accent : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(24, 28, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag Handle
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 24),
+
+          // Header
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2D5096).withOpacity(0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.psychology_rounded, color: Color(0xFF2D5096), size: 32),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Rate AI Performance',
+            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Is the AI detection good for this batch?',
+            style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF7B8EA7)),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
+
+          // Option Chips
+          Row(
+            children: [
+              Expanded(child: _chip('yes', 'Yes', Icons.thumb_up_rounded, const Color(0xFF10B981))),
+              const SizedBox(width: 12),
+              Expanded(child: _chip('satisfactory', 'Satisfactory', Icons.thumbs_up_down_rounded, const Color(0xFFF38020))),
+              const SizedBox(width: 12),
+              Expanded(child: _chip('no', 'No', Icons.thumb_down_rounded, const Color(0xFFEF4444))),
+            ],
+          ),
+          const SizedBox(height: 28),
+
+          // Submit Button
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: _selected == null || _saving ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D5096),
+                disabledBackgroundColor: const Color(0xFFCBD5E0),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: _saving
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(
+                      'Submit Review',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Skip
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Skip for now', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
 }

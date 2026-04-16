@@ -14,6 +14,7 @@ import '../widgets/brand_header.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'report_screen.dart';
+import 'photo_batch_screen.dart';
 
 class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});
@@ -284,6 +285,19 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
                 itemBuilder: (context, index) {
                   return _ProjectCard(
                     project: projects[index],
+                    onResume: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PhotoBatchScreen(
+                            projectId: projects[index].id,
+                            projectTitle: projects[index].name,
+                            location: projects[index].location,
+                            isResuming: true,
+                          ),
+                        ),
+                      );
+                    },
                     onDelete: () async {
                       final confirm = await showDialog<bool>(
                         context: context,
@@ -810,10 +824,12 @@ class _DamageMapState extends State<_DamageMap> {
 class _ProjectCard extends StatefulWidget {
   final Project project;
   final VoidCallback onDelete;
+  final VoidCallback onResume;
 
   const _ProjectCard({
     required this.project,
     required this.onDelete,
+    required this.onResume,
   });
 
   @override
@@ -1104,7 +1120,20 @@ class _ProjectCardState extends State<_ProjectCard> {
                             },
                           ),
                         ),
-                      if (p.reportPdfPath != null) const SizedBox(width: 10),
+                      if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty))
+                        const SizedBox(width: 10),
+                      // Resume Project button — only for Batch Mode projects
+                      if (p.name != 'Live Anomaly Capture') ...[
+                        Expanded(
+                          child: _actionButton(
+                            icon: Icons.play_circle_outline_rounded,
+                            label: 'Resume',
+                            color: const Color(0xFF10B981),
+                            onTap: widget.onResume,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
                       // Delete button
                       Expanded(
                         child: _actionButton(

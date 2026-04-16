@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/sync_manager.dart';
 import '../screens/main_screen.dart';
+import '../screens/login_screen.dart';
 
 class BrandHeader extends StatelessWidget {
   const BrandHeader({super.key});
@@ -49,7 +50,14 @@ class BrandHeader extends StatelessWidget {
                 );
                 await SyncManager.syncData();
               } else if (value == 'logout') {
-                AuthService.signOut();
+                await AuthService.signOut();
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
               }
             },
             itemBuilder: (context) => [

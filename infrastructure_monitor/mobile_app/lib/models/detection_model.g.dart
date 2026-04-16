@@ -27,9 +27,9 @@ class DetectionAdapter extends TypeAdapter<Detection> {
       latitude: fields[7] as double?,
       longitude: fields[8] as double?,
       timestamp: fields[9] as DateTime,
-      isDeleted: (fields[10] as bool?) ?? false,
-      updatedAt: (fields[11] as DateTime?) ?? (fields[9] as DateTime),
-      isSynced: (fields[12] as bool?) ?? false,
+      isDeleted: fields[10] as bool,
+      updatedAt: fields[11] as DateTime?,
+      isSynced: fields[12] as bool,
     );
   }
 

@@ -31,6 +31,15 @@ class Project extends HiveObject {
   @HiveField(8)
   int detectionCount;
 
+  @HiveField(9)
+  bool isDeleted;
+
+  @HiveField(10)
+  DateTime updatedAt;
+
+  @HiveField(11)
+  String? isCorrect;
+
   Project({
     required this.id,
     required this.name,
@@ -43,6 +52,7 @@ class Project extends HiveObject {
     this.detectionCount = 0,
     this.isDeleted = false,
     DateTime? updatedAt,
+    this.isCorrect,
   }) : updatedAt = updatedAt ?? createdAt;
 
   Map<String, dynamic> toMap() {
@@ -55,6 +65,9 @@ class Project extends HiveObject {
       'location': location,
       'reportPdfUrl': reportPdfUrl,
       'detectionCount': detectionCount,
+      'isDeleted': isDeleted,
+      'updatedAt': updatedAt.toIso8601String(),
+      'isCorrect': isCorrect,
     };
   }
 
@@ -68,6 +81,9 @@ class Project extends HiveObject {
       location: map['location'] ?? '',
       reportPdfUrl: map['reportPdfUrl'],
       detectionCount: map['detectionCount'] ?? 0,
+      isDeleted: map['isDeleted'] ?? false,
+      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.parse(map['createdAt']),
+      isCorrect: map['isCorrect'],
     );
   }
 }

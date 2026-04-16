@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -543,203 +544,6 @@ class ReportService {
       ),
     );
 
-    await Printing.layoutPdf(
-      onLayout: (_) async => pdf.save(),
-      name: 'Batch_Report_${projectTitle.replaceAll(' ', '_')}.pdf',
-    );
-  }
-
-  /// Generates a batch PDF report, saves it locally, AND shows print dialog.
-  /// Returns the local file path of the saved PDF.
-  static Future<String?> generateAndSaveBatchReport({
-    required String projectTitle,
-    required String location,
-    required List<PhotoResult> photoResults,
-  }) async {
-    final date = DateFormat('yyyy-MM-dd  HH:mm').format(DateTime.now());
-    final pdf = pw.Document();
-
-    // Pre-annotate all images
-    final List<pw.MemoryImage> annotatedImages = [];
-    for (final pr in photoResults) {
-      final raw = await File(pr.imagePath).readAsBytes();
-      final annotated = await _annotateImage(
-        imageBytes: raw,
-        detections: pr.detections,
-      );
-      annotatedImages.add(pw.MemoryImage(annotated));
-    }
-
-    final int totalDetections = photoResults.fold(0, (sum, pr) => sum + pr.detections.length);
-
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) {
-          final List<pw.Widget> widgets = [];
-
-          widgets.add(pw.Header(
-            level: 0,
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text('Infrastructure Batch Inspection Report',
-                    style: pw.TextStyle(
-                        fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
-                pw.Text(date,
-                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-              ],
-            ),
-          ));
-
-          widgets.add(pw.SizedBox(height: 14));
-
-          widgets.add(pw.Container(
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.blue50,
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-            ),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Row(children: [
-                pw.Text('Project: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text(projectTitle),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Location: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text(location),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Photos inspected: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text('${photoResults.length}'),
-              ]),
-              pw.SizedBox(height: 4),
-              pw.Row(children: [
-                pw.Text('Total damages found: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                pw.Text('$totalDetections'),
-              ]),
-            ]),
-          ));
-
-          widgets.add(pw.SizedBox(height: 24));
-
-          for (int i = 0; i < photoResults.length; i++) {
-            final pr = photoResults[i];
-            final detections = pr.detections;
-            final note = pr.note;
-
-            widgets.add(pw.Container(
-              padding: const pw.EdgeInsets.all(14),
-              margin: const pw.EdgeInsets.only(bottom: 20),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-              ),
-              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Photo ${i + 1}',
-                        style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
-                    pw.Text(
-                      detections.isEmpty ? '✓ No damage' : '⚠ ${detections.length} damage(s)',
-                      style: pw.TextStyle(
-                        fontSize: 11,
-                        color: detections.isEmpty ? PdfColors.green700 : PdfColors.red700,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 10),
-                if (pr.lat != null && pr.lng != null)
-                  pw.Container(
-                    margin: const pw.EdgeInsets.only(bottom: 8),
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: const pw.BoxDecoration(
-                      color: PdfColors.blueGrey50,
-                      borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.Row(children: [
-                      pw.Text('GPS Coordinates: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                      pw.Text(LocationHelper.formatToCardinal(pr.lat!, pr.lng!), style: const pw.TextStyle(fontSize: 10, color: PdfColors.blue900)),
-                    ]),
-                  ),
-                pw.Center(
-                  child: pw.Container(
-                    height: 260,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey300),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.ClipRRect(
-                      horizontalRadius: 6,
-                      verticalRadius: 6,
-                      child: pw.Image(annotatedImages[i], fit: pw.BoxFit.contain),
-                    ),
-                  ),
-                ),
-                if (note.isNotEmpty) ...[
-                  pw.SizedBox(height: 8),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.amber50,
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                    ),
-                    child: pw.Row(children: [
-                      pw.Text('Note: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                      pw.Flexible(child: pw.Text(note, style: const pw.TextStyle(fontSize: 11))),
-                    ]),
-                  ),
-                ],
-                if (detections.isNotEmpty) ...[
-                  pw.SizedBox(height: 10),
-                  pw.Text('Detections',
-                      style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                  pw.SizedBox(height: 6),
-                  pw.Table(
-                    border: pw.TableBorder.all(color: PdfColors.grey300),
-                    columnWidths: {
-                      0: const pw.FlexColumnWidth(3),
-                      1: const pw.FlexColumnWidth(2),
-                      2: const pw.FlexColumnWidth(2),
-                    },
-                    children: [
-                      pw.TableRow(
-                        decoration: const pw.BoxDecoration(color: PdfColors.blueGrey100),
-                        children: [
-                          _cell('Damage Type', bold: true),
-                          _cell('Confidence', bold: true),
-                          _cell('Severity', bold: true),
-                        ],
-                      ),
-                      ...detections.map((d) => pw.TableRow(children: [
-                        _cell(d.label.replaceAll('_', ' ').toUpperCase()),
-                        _cell('${(d.score * 100).toStringAsFixed(1)}%'),
-                        _cell(d.severity),
-                      ])),
-                    ],
-                  ),
-                ],
-              ]),
-            ));
-          }
-
-          widgets.add(pw.Divider(color: PdfColors.grey300));
-          widgets.add(pw.SizedBox(height: 6));
-          widgets.add(pw.Text(
-            'Generated by AI Infrastructure Monitor  •  $date',
-            style: pw.TextStyle(fontSize: 9, fontStyle: pw.FontStyle.italic, color: PdfColors.grey600),
-          ));
-          return widgets;
-        },
-      ),
-    );
-
     // Save PDF to local file system
     try {
       final dir = await getApplicationDocumentsDirectory();
@@ -770,23 +574,44 @@ class ReportService {
   // PDF Merge helpers — used when Resuming a project
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// Downloads (or reads locally) the bytes of an existing PDF.
   static Future<Uint8List?> _fetchExistingPdfBytes({
     String? localPath,
     String? remoteUrl,
   }) async {
-    if (localPath != null && localPath.isNotEmpty) {
-      final file = File(localPath);
-      if (await file.exists()) return await file.readAsBytes();
-    }
+    // Priority: Fetch from remote schema URL as requested
     if (remoteUrl != null && remoteUrl.isNotEmpty) {
       try {
+        print('Fetching existing PDF from Remote URL: $remoteUrl');
         final response = await http.get(Uri.parse(remoteUrl));
-        if (response.statusCode == 200) return response.bodyBytes;
+        if (response.statusCode == 200) {
+          print('Successfully fetched existing PDF from URL. Size: ${response.bodyBytes.length} bytes');
+          return response.bodyBytes;
+        } else {
+          print('Failed to fetch from URL. Status code: ${response.statusCode}');
+        }
       } catch (e) {
         print('Error fetching existing PDF from URL: $e');
       }
     }
+
+    // Fallback: local file if URL fetch fails or is unset
+    if (localPath != null && localPath.isNotEmpty) {
+      try {
+        print('Attempting to fetch existing PDF from Local Path: $localPath');
+        final file = File(localPath);
+        if (await file.exists()) {
+          final bytes = await file.readAsBytes();
+          print('Successfully read local PDF. Size: ${bytes.length} bytes');
+          return bytes;
+        } else {
+          print('Local PDF file does not exist at path: $localPath');
+        }
+      } catch (e) {
+        print('Error reading local PDF file: $e');
+      }
+    }
+    
+    print('Failed to fetch any existing PDF. Returning null.');
     return null;
   }
 

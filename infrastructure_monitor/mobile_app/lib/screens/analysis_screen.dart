@@ -14,6 +14,7 @@ import '../widgets/brand_header.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'analysis_map_screen.dart';
+import 'photo_batch_screen.dart';
 
 class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});
@@ -749,12 +750,10 @@ class _DamageMapState extends State<_DamageMap> {
 class _ProjectCard extends StatefulWidget {
   final Project project;
   final VoidCallback onDelete;
-  final VoidCallback onResume;
 
   const _ProjectCard({
     required this.project,
     required this.onDelete,
-    required this.onResume,
   });
 
   @override
@@ -1030,11 +1029,12 @@ class _ProjectCardState extends State<_ProjectCard> {
                     Row(
                       children: [
                         // View Report button
-                        if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty))
+                        if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty)) ...[
                           Expanded(
+                            flex: 3,
                             child: _actionButton(
                               icon: Icons.description_rounded,
-                              label: 'View Project Report',
+                              label: 'View Report',
                               color: const Color(0xFF2D5096),
                               onTap: () async {
                                 final pdfPath = p.reportPdfPath;
@@ -1059,13 +1059,41 @@ class _ProjectCardState extends State<_ProjectCard> {
                               },
                             ),
                           ),
-                        if ((p.reportPdfPath != null && p.reportPdfPath!.isNotEmpty) || (p.reportPdfUrl != null && p.reportPdfUrl!.isNotEmpty))
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
+                        ],
+
+                        // Resume project button
+                        if (p.name != 'Live Anomaly Capture') ...[
+                          Expanded(
+                            flex: 3,
+                            child: _actionButton(
+                              icon: Icons.play_arrow_rounded,
+                              label: 'Resume Project',
+                              color: const Color(0xFF10B981),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PhotoBatchScreen(
+                                      projectId: p.id,
+                                      projectTitle: p.name,
+                                      location: p.location,
+                                      isResuming: true,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        
                         // Delete button
                         Expanded(
+                          flex: 2,
                           child: _actionButton(
                             icon: Icons.delete_sweep_rounded,
-                            label: 'Purge Project',
+                            label: 'Delete',
                             color: const Color(0xFFEF4444),
                             onTap: widget.onDelete,
                           ),

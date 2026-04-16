@@ -118,14 +118,25 @@ class AuthService {
     await _auth.signOut();
   }
 
-  static Future<void> updateProfile({required String fullName, String? phone}) async {
+  static Future<void> updateProfile({
+    required String fullName, 
+    String? phone,
+    String? photoUrl,
+  }) async {
     final user = _auth.currentUser;
     if (user != null) {
       await user.updateDisplayName(fullName);
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      if (photoUrl != null) {
+        await user.updatePhotoURL(photoUrl);
+      }
+      
+      final updateData = <String, dynamic>{
         'fullName': fullName,
         if (phone != null) 'phone': phone,
-      });
+        if (photoUrl != null) 'profileImageUrl': photoUrl,
+      };
+      
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(updateData);
       await user.reload();
     }
   }

@@ -1,11 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'about_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/detector_service.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/firebase_service.dart';
 import '../utils/constants.dart';
+import 'login_screen.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -166,7 +170,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 👤 PROFILE HEADER
-                  _buildProfileHeader(displayName, email, () => _showEditProfileDialog(displayName)),
+                  _buildProfileHeader(displayName, email, () => _showEditProfileBottomSheet()),
                   
                   const SizedBox(height: 32),
 
@@ -261,7 +265,16 @@ class _SettingsPageState extends State<SettingsPage> {
                         _buildActionTile(
                           icon: Icons.logout_rounded,
                           label: 'Sign Out Session',
-                          onTap: () => AuthService.signOut(),
+                          onTap: () async {
+                            await AuthService.signOut();
+                            if (context.mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                (route) => false,
+                              );
+                            }
+                          },
                           color: const Color(0xFFEF4444),
                         ),
                       ],
@@ -278,53 +291,146 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showEditProfileDialog(String currentName) {
-    final TextEditingController nameController = TextEditingController(text: currentName);
+  void _showEditProfileBottomSheet() {
+    final user = AuthService.currentUser;
+    final currentName = user?.displayName ?? '';
+    final currentPhone = _userData?['phone'] ?? '';
     
-    showDialog(
+    final TextEditingController nameController = TextEditingController(text: currentName);
+    final TextEditingController phoneController = TextEditingController(text: currentPhone);
+    XFile? selectedImage;
+    bool isSaving = false;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text("Edit Profile", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: "Full Name",
-                labelStyle: GoogleFonts.outfit(),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              left: 24,
+              right: 24,
+              top: 32,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Edit Profile", style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40))),
+                  const SizedBox(height: 24),
+                  // Avatar Picker
+                  GestureDetector(
+                    onTap: () async {
+                      final picker = ImagePicker();
+                      final image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                      if (image != null) {
+                        setModalState(() => selectedImage = image);
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey.shade100,
+                          backgroundImage: selectedImage != null 
+                              ? FileImage(File(selectedImage!.path)) 
+                              : (user?.photoURL != null ? NetworkImage(user!.photoURL!) as ImageProvider : null),
+                          child: (selectedImage == null && user?.photoURL == null) 
+                              ? const Icon(Icons.person_outline_rounded, size: 50, color: Color(0xFF2D5096))
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(color: const Color(0xFF3B82F6), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: "Full Name",
+                      labelStyle: GoogleFonts.outfit(),
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: "Phone Number",
+                      labelStyle: GoogleFonts.outfit(),
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2D5096), 
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: isSaving ? null : () async {
+                        final newName = nameController.text.trim();
+                        final newPhone = phoneController.text.trim();
+                        if (newName.isNotEmpty) {
+                          setModalState(() => isSaving = true);
+                          try {
+                            String? photoUrl;
+                            if (selectedImage != null && user != null) {
+                              photoUrl = await FirebaseService.uploadImage('profile_images/${user.uid}', selectedImage!.path);
+                            }
+                            await AuthService.updateProfile(
+                              fullName: newName, 
+                              phone: newPhone.isNotEmpty ? newPhone : null,
+                              photoUrl: photoUrl,
+                            );
+                            await _loadSettings(); // Reload local state to update UI
+                            if (context.mounted) {
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated successfully")));
+                            }
+                          } catch (e) {
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                            setModalState(() => isSaving = false);
+                          }
+                        }
+                      },
+                      child: isSaving 
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : Text("Save Changes", style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2D5096), foregroundColor: Colors.white),
-            onPressed: () async {
-              final newName = nameController.text.trim();
-              if (newName.isNotEmpty) {
-                Navigator.pop(ctx);
-                setState(() => _isLoading = true);
-                try {
-                  await AuthService.updateProfile(fullName: newName);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated successfully")));
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
-                } finally {
-                  setState(() => _isLoading = false);
-                }
-              }
-            },
-            child: const Text("Save"),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
   Widget _buildProfileHeader(String name, String email, VoidCallback onEdit) {
+    final photoUrl = AuthService.currentUser?.photoURL ?? _userData?['profileImageUrl'];
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -342,10 +448,11 @@ class _SettingsPageState extends State<SettingsPage> {
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFF2D5096).withOpacity(0.1), width: 2),
             ),
-            child: const CircleAvatar(
+            child: CircleAvatar(
               radius: 40,
               backgroundColor: Colors.grey.shade100,
-              child: const Icon(Icons.person_outline_rounded, size: 40, color: Color(0xFF2D5096)),
+              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+              child: photoUrl == null ? const Icon(Icons.person_outline_rounded, size: 40, color: Color(0xFF2D5096)) : null,
             ),
           ),
           const SizedBox(width: 20),

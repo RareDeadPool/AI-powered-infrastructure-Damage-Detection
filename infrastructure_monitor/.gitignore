@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+env/
+venv/
+.env
+
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+
+# Project specific
+venv_gpu/
+runs/
+data/
+!data/data.yaml
+*.pt
+scratch/

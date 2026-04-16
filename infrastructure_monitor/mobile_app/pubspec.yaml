@@ -1,0 +1,76 @@
+name: mobile_app
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.10.8 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  http: ^1.6.0
+  image_picker: ^1.2.1
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
+  tflite_flutter: ^0.12.1
+  image: ^4.3.0
+  camera: ^0.12.0+1
+  # PDF reporting
+  pdf: ^3.12.0
+  printing: ^5.13.0
+  path_provider: ^2.1.0
+  intl: ^0.19.0
+  # Krish: offline storage + Firebase + auth
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.4.3
+  firebase_storage: ^12.3.0
+  firebase_database: ^11.3.10
+  google_sign_in: ^6.2.1
+  connectivity_plus: ^6.1.0
+  shared_preferences: ^2.3.2
+  uuid: ^4.5.1
+  path: ^1.9.1
+  google_fonts: ^8.0.2
+  crypto: ^3.0.6
+  open_filex: ^4.7.0
+  url_launcher: ^6.3.2
+  google_maps_flutter: ^2.17.0
+  fl_chart: ^1.2.0
+
+dependency_overrides:
+  # Pin path_provider_foundation to a version that does NOT use
+  # the objective_c package, whose build hook breaks on Windows
+  # paths containing spaces (e.g. "Aditya Sawant").
+  path_provider_foundation: 2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.12
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/models/final_model.tflite
+    - assets/brand/logo.png
+    - assets/pothole_detection.png
+    - assets/pipeline_monitoring.png
+    - assets/crack_analysis.png
+    - assets/inspector_avatar.png
+    - assets/icons/
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package

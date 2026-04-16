@@ -1,0 +1,13 @@
+train: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\train\images
+val: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\train\images
+test: c:\Users\Aditya Sawant\Desktop\AIML\infrastructure_monitor\test\images
+
+nc: 1
+names: ['burst']
+
+roboflow:
+  workspace: adityas-workspace-szlvz
+  project: adityas-workspace-szlvz
+  version: dataset
+  license: Private
+  url: https://app.roboflow.com/adityas-workspace-szlvz/adityas-workspace-szlvz/dataset

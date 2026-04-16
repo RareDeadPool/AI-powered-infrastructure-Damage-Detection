@@ -1,0 +1,23 @@
+{
+  "source_run": "pipe_leak_model2",
+  "source_weights": "runs/detect/pipe_leak_model2/weights/best.pt",
+  "best_metric_map50_95": 0.78079,
+  "best_epoch": 50,
+  "class_names": [
+    "burst"
+  ],
+  "expected_classes": [
+    "pothole",
+    "road_crack",
+    "bridge_crack",
+    "pipeline_leak"
+  ],
+  "present_expected_classes": [],
+  "missing_expected_classes": [
+    "pothole",
+    "road_crack",
+    "bridge_crack",
+    "pipeline_leak"
+  ],
+  "target_model": "models/final_model.pt"
+}

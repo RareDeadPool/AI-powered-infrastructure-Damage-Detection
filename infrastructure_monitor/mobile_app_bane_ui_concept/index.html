@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CityScan Mobile</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="logo">
+        <i class="fa-solid fa-city logo-icon"></i>
+        <span>CityScan</span>
+      </div>
+      <div class="header-icons">
+        <i class="fa-solid fa-cubes-stacked header-action"></i>
+        <div class="profile-pic">
+          <img src="https://i.pravatar.cc/100?img=11" alt="Profile">
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section class="vitality-card">
+        <div class="vitality-badge">LIVE INFRASTRUCTURE HEALTH</div>
+        <div class="vitality-score">
+          <h1>98.4<span>%</span></h1>
+          <div class="vitality-text">Global Vitality<br>Index</div>
+        </div>
+        <p class="vitality-desc">System AI has identified 3 minor anomalies across the northeast pipeline sector. No immediate intervention required.</p>
+      </section>
+
+      <div class="section-header">
+        <div class="section-titles">
+          <h4 class="sub-title">SPECIALIZED ANALYSIS</h4>
+          <h2 class="main-title">Detection Modules</h2>
+        </div>
+        <a href="#" class="view-all">View All</a>
+      </div>
+
+      <div class="modules-list">
+        <!-- Pothole Card -->
+        <article class="module-card">
+          <div class="card-icon pothole">
+            <i class="fa-solid fa-road-circle-exclamation"></i>
+          </div>
+          <h3>Pothole Detection</h3>
+          <p>Computer vision mapping for urban road maintenance.</p>
+          <a href="#" class="launch-link orange">Launch Module <i class="fa-solid fa-arrow-right"></i></a>
+          <div class="card-image-wrap">
+            <img src="assets/pothole_detection.png" alt="Pothole Detection">
+          </div>
+        </article>
+
+        <!-- Pipeline Card -->
+        <article class="module-card">
+          <div class="card-icon pipeline">
+            <i class="fa-solid fa-water"></i>
+          </div>
+          <h3>Pipeline Monitoring</h3>
+          <p>Real-time pressure and structural integrity tracking.</p>
+          <a href="#" class="launch-link green">Launch Module <i class="fa-solid fa-arrow-right"></i></a>
+          <div class="card-image-wrap">
+            <img src="assets/pipeline_monitoring.png" alt="Pipeline Monitoring">
+          </div>
+        </article>
+
+        <!-- Crack Card -->
+        <article class="module-card">
+          <div class="card-icon crack">
+            <i class="fa-solid fa-bridge-circle-exclamation"></i>
+          </div>
+          <h3>Crack Analysis</h3>
+          <p>Precision measurement of concrete and steel fatigue.</p>
+          <a href="#" class="launch-link blue">Launch Module <i class="fa-solid fa-arrow-right"></i></a>
+          <div class="card-image-wrap">
+            <img src="assets/crack_analysis.png" alt="Crack Analysis">
+          </div>
+        </article>
+      </div>
+      
+      <!-- Spacer for bottom elements -->
+      <div class="bottom-spacer"></div>
+    </main>
+
+    <div class="floating-action-area">
+      <button class="start-inspection-btn">
+        <i class="fa-solid fa-eye action-icon"></i> Start Inspection
+      </button>
+    </div>
+
+    <nav class="bottom-tab-bar">
+      <div class="tab-item active">
+        <i class="fa-solid fa-house"></i>
+        <span>HOME</span>
+      </div>
+      <div class="tab-item">
+        <i class="fa-solid fa-circle-plus"></i>
+        <span>CREATE</span>
+      </div>
+      <div class="tab-item center-spacer"></div>
+      <div class="tab-item">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>ANALYSIS</span>
+      </div>
+      <div class="tab-item">
+        <i class="fa-solid fa-gear"></i>
+        <span>SETTINGS</span>
+      </div>
+    </nav>
+    
+    <div class="center-fab">
+      <i class="fa-solid fa-chart-simple"></i>
+    </div>
+  </div>
+</body>
+</html>

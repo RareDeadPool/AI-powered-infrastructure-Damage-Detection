@@ -14,6 +14,7 @@ import '../widgets/brand_header.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'report_screen.dart';
+import 'analysis_map_screen.dart';
 
 class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});
@@ -326,7 +327,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> with SingleTickerProvid
   }
 
   Widget _buildMapTab() {
-    return _DamageMap();
+    return const AnalysisMapScreen();
   }
   
   Widget _buildAnalyticsTab() {

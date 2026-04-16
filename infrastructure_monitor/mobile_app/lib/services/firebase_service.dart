@@ -63,5 +63,27 @@ class FirebaseService {
       return [];
     }
   }
+
+  // Delete Project from Firestore
+  static Future<bool> deleteProjectFromCloud(String projectId) async {
+    try {
+      await _firestore.collection('projects').doc(projectId).delete();
+      return true;
+    } catch (e) {
+      print('Error deleting project from cloud: $e');
+      return false;
+    }
+  }
+
+  // Delete Detection from Firestore
+  static Future<bool> deleteDetectionFromCloud(String detectionId) async {
+    try {
+      await _firestore.collection('detections').doc(detectionId).delete();
+      return true;
+    } catch (e) {
+      print('Error deleting detection from cloud: $e');
+      return false;
+    }
+  }
 }
 

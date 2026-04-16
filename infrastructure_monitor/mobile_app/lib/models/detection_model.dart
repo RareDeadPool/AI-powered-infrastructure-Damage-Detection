@@ -34,6 +34,15 @@ class Detection extends HiveObject {
   @HiveField(9)
   DateTime timestamp;
 
+  @HiveField(10)
+  bool isDeleted;
+
+  @HiveField(11)
+  DateTime updatedAt;
+
+  @HiveField(12)
+  bool isSynced;
+
   Detection({
     required this.id,
     required this.projectId,
@@ -45,7 +54,10 @@ class Detection extends HiveObject {
     this.latitude,
     this.longitude,
     required this.timestamp,
-  });
+    this.isDeleted = false,
+    DateTime? updatedAt,
+    this.isSynced = false,
+  }) : updatedAt = updatedAt ?? timestamp;
 
   Map<String, dynamic> toMap() {
     return {
@@ -59,6 +71,9 @@ class Detection extends HiveObject {
       'latitude': latitude,
       'longitude': longitude,
       'timestamp': timestamp.toIso8601String(),
+      'isDeleted': isDeleted,
+      'updatedAt': updatedAt.toIso8601String(),
+      'isSynced': isSynced,
     };
   }
 
@@ -74,6 +89,9 @@ class Detection extends HiveObject {
       latitude: map['latitude']?.toDouble(),
       longitude: map['longitude']?.toDouble(),
       timestamp: DateTime.parse(map['timestamp']),
+      isDeleted: map['isDeleted'] ?? false,
+      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.parse(map['timestamp']),
+      isSynced: map['isSynced'] ?? false,
     );
   }
 }

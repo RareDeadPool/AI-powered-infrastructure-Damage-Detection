@@ -27,13 +27,16 @@ class DetectionAdapter extends TypeAdapter<Detection> {
       latitude: fields[7] as double?,
       longitude: fields[8] as double?,
       timestamp: fields[9] as DateTime,
+      isDeleted: (fields[10] as bool?) ?? false,
+      updatedAt: (fields[11] as DateTime?) ?? (fields[9] as DateTime),
+      isSynced: (fields[12] as bool?) ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, Detection obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +56,13 @@ class DetectionAdapter extends TypeAdapter<Detection> {
       ..writeByte(8)
       ..write(obj.longitude)
       ..writeByte(9)
-      ..write(obj.timestamp);
+      ..write(obj.timestamp)
+      ..writeByte(10)
+      ..write(obj.isDeleted)
+      ..writeByte(11)
+      ..write(obj.updatedAt)
+      ..writeByte(12)
+      ..write(obj.isSynced);
   }
 
   @override

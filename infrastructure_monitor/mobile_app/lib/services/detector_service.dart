@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 import '../models/recognition.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
 import 'dart:isolate';
 
@@ -19,11 +20,20 @@ class DetectorService {
     'pipeline_leak',
     'corrosion'
   ];
+  
+  static Map<String, double> categoryThresholds = {
+    'pothole': 0.15,
+    'crack': 0.15,
+    'pipeline_leak': 0.15,
+    'corrosion': 0.15,
+  };
+  static double iouThreshold = 0.45;
 
   bool _isInitialized = false;
   bool _isProcessing = false;
 
   Future<void> init() async {
+    await loadSettings();
     if (_isInitialized) return;
     try {
       final options = InterpreterOptions()..threads = 4;
@@ -206,50 +216,52 @@ class DetectorService {
         }
       }
 
-      if (maxScore > 0.15) {
-        double cx = data[0 * 8400 + i];
-        double cy = data[1 * 8400 + i];
-        double w = data[2 * 8400 + i];
-        double h = data[3 * 8400 + i];
-
-        // Map coordinates from the 640x640 center-crop back to original frame dimensions
-        int size = min(imgW, imgH);
-        int startX = (imgW - size) >> 1;
-        int startY = (imgH - size) >> 1;
-
-        double boxX = startX + (cx * size);
-        double boxY = startY + (cy * size);
-        double boxW = w * size;
-        double boxH = h * size;
-
-        double x1 = (boxX - boxW / 2) / imgW;
-        double y1 = (boxY - boxH / 2) / imgH;
-        double x2 = (boxX + boxW / 2) / imgW;
-        double y2 = (boxY + boxH / 2) / imgH;
-
-        // Safety Clamping
-        x1 = x1.clamp(0.0, 1.0);
-        y1 = y1.clamp(0.0, 1.0);
-        x2 = x2.clamp(0.0, 1.0);
-        y2 = y2.clamp(0.0, 1.0);
-
-        // Aspect ratio corrected area calculation
-        double areaPct = (w * h) * (640 * 640) / (newW * newH) * 100;
-
         // Apply class name mapping (merge cracks if needed)
         String label = _labels[classId];
         if (label == 'road_crack' || label == 'bridge_crack') {
           label = 'crack';
         }
 
-        recognitions.add(Recognition(
-          classId,
-          label,
-          maxScore,
-          Rect.fromLTRB(x1, y1, x2, y2),
-          areaPct,
-        ));
-      }
+        double threshold = categoryThresholds[label] ?? 0.15;
+
+        if (maxScore > threshold) {
+          double cx = data[0 * 8400 + i];
+          double cy = data[1 * 8400 + i];
+          double w = data[2 * 8400 + i];
+          double h = data[3 * 8400 + i];
+
+          // Map coordinates from the 640x640 center-crop back to original frame dimensions
+          int size = min(imgW, imgH);
+          int startX = (imgW - size) >> 1;
+          int startY = (imgH - size) >> 1;
+
+          double boxX = startX + (cx * size);
+          double boxY = startY + (cy * size);
+          double boxW = w * size;
+          double boxH = h * size;
+
+          double x1 = (boxX - boxW / 2) / imgW;
+          double y1 = (boxY - boxH / 2) / imgH;
+          double x2 = (boxX + boxW / 2) / imgW;
+          double y2 = (boxY + boxH / 2) / imgH;
+
+          // Safety Clamping
+          x1 = x1.clamp(0.0, 1.0);
+          y1 = y1.clamp(0.0, 1.0);
+          x2 = x2.clamp(0.0, 1.0);
+          y2 = y2.clamp(0.0, 1.0);
+
+          // Aspect ratio corrected area calculation
+          double areaPct = (w * h) * (640 * 640) / (newW * newH) * 100;
+
+          recognitions.add(Recognition(
+            classId,
+            label,
+            maxScore,
+            Rect.fromLTRB(x1, y1, x2, y2),
+            areaPct,
+          ));
+        }
     }
 
     // 5. Apply Non-Maximum Suppression (NMS)
@@ -271,7 +283,7 @@ class DetectorService {
         for (int j = i + 1; j < recognitions.length; j++) {
           if (active[j]) {
             double iou = _calculateIoU(recognitions[i].location, recognitions[j].location);
-            if (iou > 0.45) {
+            if (iou > iouThreshold) {
               active[j] = false;
             }
           }
@@ -298,5 +310,19 @@ class DetectorService {
 
     double unionArea = (a.width * a.height) + (b.width * b.height) - intersectionArea;
     return intersectionArea / unionArea;
+  }
+
+  static Future<void> loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      categoryThresholds['pothole'] = prefs.getDouble('conf_pothole') ?? 0.15;
+      categoryThresholds['crack'] = prefs.getDouble('conf_crack') ?? 0.15;
+      categoryThresholds['pipeline_leak'] = prefs.getDouble('conf_pipeline_leak') ?? 0.15;
+      categoryThresholds['corrosion'] = prefs.getDouble('conf_corrosion') ?? 0.15;
+      iouThreshold = prefs.getDouble('iou_threshold') ?? 0.45;
+      print('Detector thresholds loaded: $categoryThresholds, IoU=$iouThreshold');
+    } catch (e) {
+      print('Error loading detector settings: $e');
+    }
   }
 }

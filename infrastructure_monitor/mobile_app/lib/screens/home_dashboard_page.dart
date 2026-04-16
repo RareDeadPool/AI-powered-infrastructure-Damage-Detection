@@ -129,7 +129,7 @@ class HomeDashboardPage extends StatelessWidget {
           ),
 
           const SliverPadding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 100),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 120),
             sliver: SliverToBoxAdapter(child: StartInspectionButton()),
           ),
         ],
@@ -143,6 +143,10 @@ class HeaderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthService.currentUser;
+    final displayName = user?.displayName ?? 'Inspector';
+    final email = user?.email ?? 'No email associated';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
       child: Row(
@@ -166,46 +170,119 @@ class HeaderWidget extends StatelessWidget {
               ),
             ],
           ),
-          Row(
-            children: [
-              _buildHeaderIcon(
-                icon: Icons.sync_rounded, 
-                onTap: () async {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Syncing Data...'), behavior: SnackBarBehavior.floating),
-                  );
-                  await SyncManager.syncData();
-                }
+          PopupMenuButton<String>(
+            padding: EdgeInsets.zero,
+            onSelected: (value) async {
+              if (value == 'sync') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Syncing Data...'), behavior: SnackBarBehavior.floating),
+                );
+                await SyncManager.syncData();
+              } else if (value == 'logout') {
+                AuthService.signOut();
+              }
+            },
+            offset: const Offset(0, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            itemBuilder: (context) => [
+              // 👤 PROFIILE HEADER (NON-SELECTABLE)
+              PopupMenuItem<String>(
+                enabled: false,
+                child: Container(
+                  width: 200,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFFF38020), width: 1.5),
+                        ),
+                        child: CircleAvatar(
+                          radius: 30,
+                          backgroundImage: const AssetImage('assets/inspector_avatar.png'),
+                          backgroundColor: Colors.grey.shade100,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        displayName,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1D2B40),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        email,
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          color: const Color(0xFF7B8EA7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(width: 10),
-              _buildHeaderIcon(
-                icon: Icons.logout_rounded, 
-                onTap: () => AuthService.signOut()
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'sync',
+                child: Row(
+                  children: [
+                    const Icon(Icons.sync_rounded, size: 20, color: Color(0xFF7B8EA7)),
+                    const SizedBox(width: 12),
+                    Text('Sync Data', style: GoogleFonts.outfit(fontSize: 14)),
+                  ],
+                ),
               ),
-              const SizedBox(width: 12),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: const Color(0xFFEEF2F6),
-                child: const Icon(Icons.person_rounded, color: Color(0xFF7B8EA7), size: 22),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    const Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)),
+                    const SizedBox(width: 12),
+                    Text('Sign Out', style: GoogleFonts.outfit(fontSize: 14, color: Color(0xFFEF4444))),
+                  ],
+                ),
               ),
             ],
-          )
+            child: Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'INSPECTOR',
+                      style: GoogleFonts.outfit(fontSize: 9, color: const Color(0xFF7B8EA7), fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    ),
+                    Text(
+                      displayName.split(' ')[0],
+                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40)),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFAFBFC), width: 2),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundImage: const AssetImage('assets/inspector_avatar.png'),
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderIcon({required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFEDF2F7)),
-        ),
-        child: Icon(icon, color: const Color(0xFF7B8EA7), size: 20),
       ),
     );
   }

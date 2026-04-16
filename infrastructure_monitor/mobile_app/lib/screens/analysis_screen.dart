@@ -198,7 +198,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                   itemCount: projects.length,
                   itemBuilder: (context, index) {
                     return _ProjectCard(

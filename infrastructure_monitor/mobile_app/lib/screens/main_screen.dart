@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home_dashboard_page.dart';
-import 'capture_anomaly_screen.dart';
+import 'capture_anomaly_screen.dart'; // Assuming QuickDetectScreen is here or similar
 import 'project_setup_screen.dart';
 import 'analysis_screen.dart';
 import 'settings_page.dart';
 import '../services/sync_manager.dart';
 import '../services/auth_service.dart';
+
+// Note: Ensure QuickDetectScreen is imported correctly. 
+// Based on your snippet, I am using QuickDetectScreen as requested.
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -18,11 +21,15 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
+  // Swapped indices as per request: 
+  // Index 1 (Create Tab) -> QuickDetectScreen
+  // Index 2 (Scan Button) -> ProjectSetupScreen
   final List<Widget> _pages = [
-    const HomeDashboardPage(),
-    const QuickDetectScreen(),
-    const AnalysisScreen(),
-    const SettingsPage(),
+    const HomeDashboardPage(),     // Index 0
+    const QuickDetectScreen(),     // Index 1 (Triggered by 'Create' Tab)
+    const ProjectSetupScreen(),    // Index 2 (Triggered by 'Scan' Button)
+    const AnalysisScreen(),        // Index 3
+    const SettingsPage(),          // Index 4
   ];
 
   @override
@@ -46,119 +53,184 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
+    const double barHeight = 100.0;
+
     return Scaffold(
       extendBody: true,
+      // IndexedStack keeps the state of all pages and allows 
+      // the bottom bar to remain visible.
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
-      bottomNavigationBar: CustomBottomTabBar(
-        currentIndex: _currentIndex,
-        onTabTapped: _onTabTapped,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ProjectSetupScreen()),
-          );
-        },
-        child: Container(
-          height: 60,
-          width: 60,
-          margin: const EdgeInsets.only(top: 30),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [Color(0xFF2D5096), Color(0xFFF38020)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      bottomNavigationBar: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          // 📐 THE SLANTED BAR (BACKGROUND)
+          CustomPaint(
+            size: Size(size.width, barHeight),
+            painter: SlantedNotchPainter(),
+          ),
+
+          // 🔳 INTERACTIVE TAB ITEMS
+          SizedBox(
+            height: barHeight,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildTabItem(
+                  iconActive: Icons.home,
+                  iconInactive: Icons.home_outlined,
+                  label: 'Home',
+                  index: 0,
+                ),
+                _buildTabItem(
+                  iconActive: Icons.add_box,
+                  iconInactive: Icons.add_box_outlined,
+                  label: 'Create',
+                  index: 1, // Now loads QuickDetectScreen
+                ),
+
+                // 🔵 SPACING FOR THE CENTER BUTTON
+                const SizedBox(width: 80),
+
+                _buildTabItem(
+                  iconActive: Icons.analytics,
+                  iconInactive: Icons.analytics_outlined,
+                  label: 'Analysis',
+                  index: 3,
+                ),
+                _buildTabItem(
+                  iconActive: Icons.person,
+                  iconInactive: Icons.person_outline_rounded,
+                  label: 'Settings',
+                  index: 4,
+                ),
+              ],
             ),
-            border: Border.all(color: const Color(0xFFFAFBFC), width: 4),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF2D5096).withOpacity(0.4),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              )
+          ),
+
+          // 🔵 SCAN BUTTON (OVERLAPPING PEAK)
+          Positioned(
+            top: 5,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () => _onTabTapped(2), // Now loads ProjectSetupScreen
+                  child: Container(
+                    height: 64,
+                    width: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      // Highlight if the "Scan" index (2) is active
+                      color: _currentIndex == 2 ? const Color(0xFF2D5096) : Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2D5096).withOpacity(0.35),
+                          blurRadius: 15,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: _currentIndex == 2 ? Colors.white : const Color(0xFF2D5096), 
+                        width: 4
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.document_scanner_rounded,
+                      color: _currentIndex == 2 ? Colors.white : const Color(0xFF2D5096),
+                      size: 28,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Scan',
+                  style: GoogleFonts.outfit(
+                    color: const Color(0xFF2D5096),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabItem({
+    required IconData iconActive,
+    required IconData iconInactive,
+    required String label,
+    required int index,
+  }) {
+    final bool isActive = _currentIndex == index;
+    const activeColor = Color(0xFF2D5096);
+    const inactiveColor = Color(0xFFA0ABBC);
+    final color = isActive ? activeColor : inactiveColor;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onTabTapped(index),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 25),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? iconActive : iconInactive,
+                color: color,
+                size: 26,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: isActive ? FontWeight.w900 : FontWeight.w600,
+                ),
+              ),
             ],
           ),
-          child: const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 28),
         ),
       ),
     );
   }
 }
 
-class CustomBottomTabBar extends StatelessWidget {
-  final int currentIndex;
-  final Function(int) onTabTapped;
+class SlantedNotchPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
 
-  const CustomBottomTabBar({
-    super.key,
-    required this.currentIndex,
-    required this.onTabTapped,
-  });
+    Path path = Path();
+    double h = size.height;
+    double w = size.width;
+    double peakY = 15.0; 
+    double sideY = 40.0; 
+
+    path.moveTo(0, sideY);
+    path.lineTo(w * 0.4, peakY);
+    path.quadraticBezierTo(w * 0.5, 5, w * 0.6, peakY);
+    path.lineTo(w, sideY);
+    path.lineTo(w, h);
+    path.lineTo(0, h);
+    path.close();
+
+    canvas.drawShadow(path.shift(const Offset(0, -3)), Colors.black.withOpacity(0.05), 10, true);
+    canvas.drawPath(path, paint);
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return BottomAppBar(
-      height: 80,
-      color: Colors.white.withOpacity(0.95),
-      elevation: 20,
-      shadowColor: Colors.black12,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8.0,
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildTabItem(icon: Icons.home_rounded, label: 'HOME', index: 0),
-            _buildTabItem(icon: Icons.add_circle_outline, label: 'CREATE', index: 1),
-            const SizedBox(width: 50), // Spacer for FAB
-            _buildTabItem(icon: Icons.auto_graph, label: 'ANALYSIS', index: 2),
-            _buildTabItem(icon: Icons.settings_outlined, label: 'SETTINGS', index: 3),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabItem({required IconData icon, required String label, required int index}) {
-    final bool isActive = currentIndex == index;
-    final color = isActive ? const Color(0xFF3B82F6) : const Color(0xFFA0ABBC);
-    return InkWell(
-      onTap: () => onTabTapped(index),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isActive ? const Color(0xFFEEF4FF) : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                color: color,
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

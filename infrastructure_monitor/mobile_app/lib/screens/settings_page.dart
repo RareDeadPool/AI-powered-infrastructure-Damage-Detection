@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/detector_service.dart';
+import '../services/auth_service.dart';
+import '../services/database_service.dart';
 import '../utils/constants.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -20,6 +22,8 @@ class _SettingsPageState extends State<SettingsPage> {
   };
   double _iouThreshold = 0.45;
   bool _isLoading = true;
+  
+  bool _autoSync = true;
 
   @override
   void initState() {
@@ -36,6 +40,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _thresholds['corrosion'] = prefs.getDouble('conf_corrosion') ?? 0.15;
       _iouThreshold = prefs.getDouble('iou_threshold') ?? 0.45;
       
+      _autoSync = prefs.getBool('auto_sync') ?? true;
+
       // Update the service static variables
       DetectorService.categoryThresholds = Map.from(_thresholds);
       DetectorService.iouThreshold = _iouThreshold;
@@ -56,6 +62,14 @@ class _SettingsPageState extends State<SettingsPage> {
     DetectorService.iouThreshold = val;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('iou_threshold', val);
+  }
+
+  Future<void> _toggleSetting(String key, bool val) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, val);
+    setState(() {
+      if (key == 'auto_sync') _autoSync = val;
+    });
   }
 
   Future<void> _resetToDefaults() async {
@@ -81,8 +95,33 @@ class _SettingsPageState extends State<SettingsPage> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings reset to defaults')),
+      const SnackBar(content: Text('AI Calibration reset to defaults')),
     );
+  }
+
+  Future<void> _clearCache() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Clear Local Cache?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: const Text('This will delete all local inspection data. Synced data on the cloud will remain safe.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await DatabaseService.projectsBox.clear();
+      await DatabaseService.detectionsBox.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local cache cleared.')));
+      }
+    }
   }
 
   @override
@@ -90,243 +129,295 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
-    
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: Text('Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.black)),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          actions: [
-            IconButton(
-              onPressed: _resetToDefaults,
-              icon: const Icon(Icons.refresh_rounded, color: Colors.black54),
-              tooltip: 'Reset to Defaults',
-            )
-          ],
-        ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
+
+    final user = AuthService.currentUser;
+    final displayName = user?.displayName ?? 'Authorized Inspector';
+    final email = user?.email ?? 'No email associated';
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 120.0,
+            floating: false,
+            pinned: true,
+            backgroundColor: const Color(0xFFF8FAFC),
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text('Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40), fontSize: 22)),
+              centerTitle: false,
+              titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+            ),
+          ),
+          
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 👤 PROFILE HEADER
+                  _buildProfileHeader(displayName, email),
+                  
+                  const SizedBox(height: 32),
+
+                  // 📱 APP SETTINGS SECTION
+                  _buildSectionHeader('APPLICATION SETTINGS'),
+                  _buildSettingCard(
+                    child: Column(
+                      children: [
+                        _buildSwitchTile(
+                          icon: Icons.sync_rounded,
+                          label: 'Automatic Cloud Sync',
+                          value: _autoSync,
+                          onChanged: (v) => _toggleSetting('auto_sync', v),
+                          color: const Color(0xFF3B82F6),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // 🤖 AI CALIBRATION SECTION
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionHeader('AI INFERENCE CALIBRATION'),
+                      TextButton(
+                        onPressed: _resetToDefaults,
+                        child: Text('Reset', style: GoogleFonts.outfit(color: const Color(0xFF3B82F6), fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                  _buildSettingCard(
+                    child: Column(
+                      children: [
+                        _buildCalibrationTile(
+                          label: 'Pothole Sensitivity',
+                          value: _thresholds['pothole']!,
+                          color: const Color(0xFF2D5096),
+                          onChanged: (v) => _saveConfidence('pothole', v),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildCalibrationTile(
+                          label: 'Crack Sensitivity',
+                          value: _thresholds['crack']!,
+                          color: const Color(0xFFF38020),
+                          onChanged: (v) => _saveConfidence('crack', v),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildCalibrationTile(
+                          label: 'Pipeline Leak Sensitivity',
+                          value: _thresholds['pipeline_leak']!,
+                          color: const Color(0xFF10B981),
+                          onChanged: (v) => _saveConfidence('pipeline_leak', v),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildCalibrationTile(
+                          label: 'Corrosion Sensitivity',
+                          value: _thresholds['corrosion']!,
+                          color: const Color(0xFFEF4444),
+                          onChanged: (v) => _saveConfidence('corrosion', v),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildCalibrationTile(
+                          label: 'IoU Threshold (NMS)',
+                          value: _iouThreshold,
+                          color: const Color(0xFF64748B),
+                          onChanged: _saveIou,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // 🔒 ACCOUNT & LEGAL SECTION
+                  _buildSectionHeader('ACCOUNT & SECURITY'),
+                  _buildSettingCard(
+                    child: Column(
+                      children: [
+                        _buildActionTile(
+                          icon: Icons.delete_sweep_rounded,
+                          label: 'Clear Local Cache',
+                          onTap: _clearCache,
+                          color: const Color(0xFFEF4444),
+                        ),
+                        const Divider(height: 1, indent: 50),
+                        _buildActionTile(
+                          icon: Icons.info_outline_rounded,
+                          label: 'About CityScan v1.2.0',
+                          onTap: () {},
+                          color: const Color(0xFF64748B),
+                        ),
+                        const Divider(height: 1, indent: 50),
+                        _buildActionTile(
+                          icon: Icons.logout_rounded,
+                          label: 'Sign Out Session',
+                          onTap: () => AuthService.signOut(),
+                          color: const Color(0xFFEF4444),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 120),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(String name, String email) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8))
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF2D5096).withOpacity(0.1), width: 2),
+            ),
+            child: CircleAvatar(
+              radius: 40,
+              backgroundImage: const AssetImage('assets/inspector_avatar.png'),
+              backgroundColor: Colors.grey.shade100,
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'PER-CATEGORY CALIBRATION',
-                  style: GoogleFonts.outfit(
-                      color: const Color(0xFFF38020), 
-                      fontSize: 12, 
-                      fontWeight: FontWeight.bold, 
-                      letterSpacing: 1.0),
+                  name,
+                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40)),
                 ),
-                const SizedBox(height: 8),
                 Text(
-                  'Fine-tune Sensitivity',
-                  style: GoogleFonts.outfit(
-                      color: const Color(0xFF1D2B40), 
-                      fontSize: 28, 
-                      fontWeight: FontWeight.w800),
+                  email,
+                  style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF7B8EA7)),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Independently adjust how sensitive the AI should be for each type of infrastructure damage.',
-                  style: GoogleFonts.outfit(color: const Color(0xFF6E7C91), fontSize: 14, height: 1.4),
-                ),
-                
-                const SizedBox(height: 32),
-
-                _buildCategoryHeader('🕳️ Potholes'),
-                _buildSlider(
-                  value: _thresholds['pothole']!,
-                  onChanged: (val) => _saveConfidence('pothole', val),
-                  color: const Color(0xFF2D5096)
-                ),
-
-                const SizedBox(height: 24),
-
-                _buildCategoryHeader('⚡ Cracks (Road & Bridge)'),
-                _buildSlider(
-                  value: _thresholds['crack']!,
-                  onChanged: (val) => _saveConfidence('crack', val),
-                  color: const Color(0xFFF38020)
-                ),
-
-                const SizedBox(height: 24),
-
-                _buildCategoryHeader('💧 Pipeline Leaks'),
-                _buildSlider(
-                  value: _thresholds['pipeline_leak']!,
-                  onChanged: (val) => _saveConfidence('pipeline_leak', val),
-                  color: const Color(0xFF10B981)
-                ),
-
-                const SizedBox(height: 24),
-
-                _buildCategoryHeader('🏗️ Corrosion'),
-                _buildSlider(
-                  value: _thresholds['corrosion']!,
-                  onChanged: (val) => _saveConfidence('corrosion', val),
-                  color: const Color(0xFFEF4444)
-                ),
-
-                const SizedBox(height: 40),
-
-                Text(
-                  'GLOBAL SETTINGS',
-                  style: GoogleFonts.outfit(
-                      color: const Color(0xFF64748B), 
-                      fontSize: 12, 
-                      fontWeight: FontWeight.bold, 
-                      letterSpacing: 1.0),
-                ),
-                const SizedBox(height: 16),
-
-                _buildSliderCard(
-                  title: 'Non-Maximum Supression (IoU)',
-                  value: _iouThreshold,
-                  min: 0.1,
-                  max: 0.9,
-                  onChanged: _saveIou,
-                  icon: Icons.layers_clear_outlined,
-                  color: const Color(0xFF64748B)
-                ),
-                
-                const SizedBox(height: 32),
               ],
             ),
           ),
-        ),
+          const Icon(Icons.edit_note_rounded, color: Color(0xFFCBD5E0)),
+        ],
       ),
     );
   }
 
-  Widget _buildCategoryHeader(String title) {
+  Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4),
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
       child: Text(
         title,
-        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
+        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF7B8EA7), letterSpacing: 1.5),
       ),
     );
   }
 
-  Widget _buildSlider({
-    required double value,
-    required ValueChanged<double> onChanged,
-    required Color color,
-  }) {
+  Widget _buildSettingCard({required Widget child}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
-        ]
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 6))
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: color,
-                  inactiveTrackColor: color.withOpacity(0.1),
-                  thumbColor: color,
-                  overlayColor: color.withOpacity(0.1),
-                  trackHeight: 4,
-                ),
-                child: Slider(
-                  value: value,
-                  min: 0.05,
-                  max: 0.95,
-                  divisions: 18,
-                  onChanged: onChanged,
-                ),
-              ),
-            ),
-            Container(
-              width: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '${(value * 100).toInt()}%',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12, color: color),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
-      ),
+      child: child,
     );
   }
 
-  Widget _buildSliderCard({
-    required String title,
-    required double value,
-    required double min,
-    required double max,
-    required ValueChanged<double> onChanged,
+  Widget _buildSwitchTile({
     required IconData icon,
+    required String label,
+    required bool value,
+    required ValueChanged<bool> onChanged,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 5)
-          )
-        ]
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, color: color, size: 20),
       ),
+      title: Text(label, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF1D2B40))),
+      trailing: Switch.adaptive(
+        value: value,
+        onChanged: onChanged,
+        activeColor: color,
+      ),
+    );
+  }
+
+  Widget _buildActionTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(label, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF1D2B40))),
+      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFCBD5E0)),
+    );
+  }
+
+  Widget _buildCalibrationTile({
+    required String label,
+    required double value,
+    required Color color,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
-              ),
-              const Spacer(),
+              Text(label, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1D2B40))),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${(value * 100).toInt()}%',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, color: color),
-                ),
-              )
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text('${(value * 100).toInt()}%', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+              ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: color,
-              inactiveTrackColor: color.withOpacity(0.2),
+              inactiveTrackColor: color.withOpacity(0.1),
               thumbColor: color,
               overlayColor: color.withOpacity(0.1),
-              trackHeight: 6,
+              trackHeight: 4,
             ),
             child: Slider(
               value: value,
-              min: min,
-              max: max,
-              divisions: 20,
+              min: 0.05,
+              max: 0.95,
+              divisions: 18,
               onChanged: onChanged,
             ),
           ),

@@ -157,7 +157,7 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
         title: Text("Project Setup", style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        padding: const EdgeInsets.fromLTRB(24, 10, 24, 120),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

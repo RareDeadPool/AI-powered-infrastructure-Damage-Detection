@@ -83,44 +83,74 @@ class _QuickDetectScreenState extends State<QuickDetectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'QUICK DETECT',
-              style: GoogleFonts.outfit(color: const Color(0xFFF38020), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Capture Anomaly',
-              style: GoogleFonts.outfit(color: const Color(0xFF1D2B40), fontSize: 32, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Instantly scan environments for infrastructure damage or upload existing footage for rapid AI evaluation.',
-              style: GoogleFonts.outfit(color: const Color(0xFF6E7C91), fontSize: 16, height: 1.4),
-            ),
-            
-            const SizedBox(height: 60),
-            
-            _buildActionButton(
-              label: 'Live Capture',
-              icon: Icons.camera_alt_rounded,
-              color: const Color(0xFF2D5096),
-              onTap: _startLiveCapture,
-            ),
-            const SizedBox(height: 24),
-            _buildActionButton(
-              label: 'From Gallery',
-              icon: Icons.photo_library_rounded,
-              color: const Color(0xFFF38020),
-              onTap: _pickFromGallery,
-            ),
-          ],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: const Color(0xFF1D2B40),
+        title: Text(
+          'Quick Analysis',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              Text(
+                'QUICK DETECT',
+                style: GoogleFonts.outfit(
+                  color: const Color(0xFFF38020), 
+                  fontSize: 13, 
+                  fontWeight: FontWeight.bold, 
+                  letterSpacing: 1.5
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Capture Anomaly',
+                style: GoogleFonts.outfit(
+                  color: const Color(0xFF1D2B40), 
+                  fontSize: 32, 
+                  fontWeight: FontWeight.w800
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Instantly scan environments for infrastructure damage or upload existing footage for rapid AI evaluation.',
+                style: GoogleFonts.outfit(
+                  color: const Color(0xFF6E7C91), 
+                  fontSize: 16, 
+                  height: 1.5
+                ),
+              ),
+              
+              const SizedBox(height: 48),
+              
+              _buildActionButton(
+                label: 'Live Capture',
+                icon: Icons.camera_alt_rounded,
+                color: const Color(0xFF2D5096),
+                onTap: _startLiveCapture,
+              ),
+              const SizedBox(height: 20),
+              _buildActionButton(
+                label: 'From Gallery',
+                icon: Icons.photo_library_rounded,
+                color: const Color(0xFFF38020),
+                onTap: _pickFromGallery,
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );

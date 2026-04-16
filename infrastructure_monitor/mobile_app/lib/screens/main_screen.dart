@@ -4,6 +4,7 @@ import 'home_dashboard_page.dart';
 import 'capture_anomaly_screen.dart';
 import 'project_setup_screen.dart';
 import 'analysis_screen.dart';
+import 'settings_page.dart';
 import '../services/sync_manager.dart';
 import '../services/auth_service.dart';
 
@@ -21,7 +22,7 @@ class _MainScreenState extends State<MainScreen> {
     const HomeDashboardPage(),
     const QuickDetectScreen(),
     const AnalysisScreen(),
-    const Center(child: Text('Settings Screen Placeholder', style: TextStyle(color: Colors.grey))),
+    const SettingsPage(),
   ];
 
   @override

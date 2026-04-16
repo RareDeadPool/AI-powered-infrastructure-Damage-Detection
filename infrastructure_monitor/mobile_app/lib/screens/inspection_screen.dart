@@ -6,6 +6,7 @@ import '../services/location_service.dart';
 import '../utils/constants.dart';
 import '../utils/location_helper.dart';
 import '../services/detector_service.dart';
+import '../services/detection_tracker.dart';
 import '../services/report_service.dart';
 import '../models/recognition.dart';
 import '../models/detection_model.dart';
@@ -32,6 +33,7 @@ class InspectionScreen extends StatefulWidget {
 
 class _InspectionScreenState extends State<InspectionScreen> {
   final DetectorService _detectorService = DetectorService();
+  final DetectionTracker _tracker = DetectionTracker();
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
   bool _isAnalyzing = false;
@@ -91,8 +93,10 @@ class _InspectionScreenState extends State<InspectionScreen> {
       _cameraController!.startImageStream((CameraImage image) {
         if (_isLive && !_isAnalyzing) {
           final now = DateTime.now();
+          // 200ms throttle — gives the tracker time to accumulate frames
+          // without starving the UI thread with back-to-back inference.
           if (_lastInferenceTime == null ||
-              now.difference(_lastInferenceTime!).inMilliseconds > 80) {
+              now.difference(_lastInferenceTime!).inMilliseconds > 200) {
             _lastInferenceTime = now;
             _runLiveInference(image);
           }
@@ -109,12 +113,16 @@ class _InspectionScreenState extends State<InspectionScreen> {
 
   Future<void> _runLiveInference(CameraImage image) async {
     _isAnalyzing = true;
-    final results = await _detectorService.predictCameraFrame(image);
+    final rawResults = await _detectorService.predictCameraFrame(image);
     _isAnalyzing = false;
 
     if (mounted && _isLive) {
+      // Pass raw detections through the temporal tracker.
+      // Boxes only appear after _appearThreshold consecutive frames,
+      // and persist for _disappearThreshold frames after going missing.
+      final stabilized = _tracker.update(rawResults);
       setState(() {
-        _detections = results;
+        _detections = stabilized;
       });
     }
   }
@@ -156,6 +164,9 @@ class _InspectionScreenState extends State<InspectionScreen> {
     if (_cameraController == null) return;
     try {
       await _cameraController!.resumePreview();
+      // Reset tracker so stale boxes from the previous capture don't
+      // bleed into the new live session.
+      _tracker.reset();
       setState(() {
         _isLive = true;
         _detections = [];

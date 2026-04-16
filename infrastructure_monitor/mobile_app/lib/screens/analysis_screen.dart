@@ -749,10 +749,12 @@ class _DamageMapState extends State<_DamageMap> {
 class _ProjectCard extends StatefulWidget {
   final Project project;
   final VoidCallback onDelete;
+  final VoidCallback onResume;
 
   const _ProjectCard({
     required this.project,
     required this.onDelete,
+    required this.onResume,
   });
 
   @override

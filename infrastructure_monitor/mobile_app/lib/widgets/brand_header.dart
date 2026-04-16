@@ -114,18 +114,4 @@ class BrandHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderIcon(BuildContext context, {required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFEDF2F7)),
-        ),
-        child: Icon(icon, color: const Color(0xFF7B8EA7), size: 20),
-      ),
-    );
-  }
 }

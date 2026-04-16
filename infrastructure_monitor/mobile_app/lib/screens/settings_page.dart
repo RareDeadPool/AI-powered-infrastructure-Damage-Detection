@@ -23,8 +23,8 @@ class _SettingsPageState extends State<SettingsPage> {
   };
   double _iouThreshold = 0.45;
   bool _isLoading = true;
-  
   bool _autoSync = true;
+  Map<String, dynamic>? _userData;
 
   @override
   void initState() {
@@ -40,15 +40,20 @@ class _SettingsPageState extends State<SettingsPage> {
       _thresholds['pipeline_leak'] = prefs.getDouble('conf_pipeline_leak') ?? 0.15;
       _thresholds['corrosion'] = prefs.getDouble('conf_corrosion') ?? 0.15;
       _iouThreshold = prefs.getDouble('iou_threshold') ?? 0.45;
-      
       _autoSync = prefs.getBool('auto_sync') ?? true;
 
       // Update the service static variables
       DetectorService.categoryThresholds = Map.from(_thresholds);
       DetectorService.iouThreshold = _iouThreshold;
-      
-      _isLoading = false;
-    });
+    }); // FIX: Added missing closing brace and parenthesis
+
+    final userData = await AuthService.getUserData();
+    if (mounted) {
+      setState(() {
+        _userData = userData;
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveConfidence(String key, double val) async {
@@ -80,7 +85,7 @@ class _SettingsPageState extends State<SettingsPage> {
       'pipeline_leak': 0.15,
       'corrosion': 0.15,
     };
-    final iouDefault = 0.45;
+    const iouDefault = 0.45;
 
     final prefs = await SharedPreferences.getInstance();
     for (var entry in defaults.entries) {
@@ -95,9 +100,11 @@ class _SettingsPageState extends State<SettingsPage> {
       DetectorService.iouThreshold = iouDefault;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('AI Calibration reset to defaults')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('AI Calibration reset to defaults')),
+      );
+    }
   }
 
   Future<void> _clearCache() async {
@@ -163,7 +170,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   
                   const SizedBox(height: 32),
 
-                  // 📱 APP SETTINGS SECTION
                   _buildSectionHeader('APPLICATION SETTINGS'),
                   _buildSettingCard(
                     child: Column(
@@ -181,7 +187,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
                   const SizedBox(height: 32),
 
-                  // 🤖 AI CALIBRATION SECTION
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -235,7 +240,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
                   const SizedBox(height: 32),
 
-                  // 🔒 ACCOUNT & LEGAL SECTION
                   _buildSectionHeader('ACCOUNT & SECURITY'),
                   _buildSettingCard(
                     child: Column(
@@ -338,7 +342,7 @@ class _SettingsPageState extends State<SettingsPage> {
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFF2D5096).withOpacity(0.1), width: 2),
             ),
-            child: CircleAvatar(
+            child: const CircleAvatar(
               radius: 40,
               backgroundColor: Colors.grey.shade100,
               child: const Icon(Icons.person_outline_rounded, size: 40, color: Color(0xFF2D5096)),
@@ -357,6 +361,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   email,
                   style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF7B8EA7)),
                 ),
+                if (_userData?['phone'] != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _userData!['phone'],
+                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                  ),
+                ],
               ],
             ),
           ),

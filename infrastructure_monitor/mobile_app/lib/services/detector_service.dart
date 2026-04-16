@@ -255,11 +255,11 @@ class DetectorService {
           double areaPct = (w * h) * (640 * 640) / (newW * newH) * 100;
 
           recognitions.add(Recognition(
-            classId,
-            label,
-            maxScore,
-            Rect.fromLTRB(x1, y1, x2, y2),
-            areaPct,
+            id: classId,
+            label: label,
+            score: maxScore,
+            location: Rect.fromLTRB(x1, y1, x2, y2),
+            areaPct: areaPct,
           ));
         }
     }

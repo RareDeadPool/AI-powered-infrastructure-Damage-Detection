@@ -23,42 +23,6 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
   
   bool _isFetchingLocation = false;
 
-  Future<void> _startInspection() async {
-    final title = _titleController.text.trim();
-    final location = _locationController.text.trim();
-
-    if (title.isEmpty || location.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter all details!'), behavior: SnackBarBehavior.floating, backgroundColor: AppColors.severityHigh)
-      );
-      return;
-    }
-
-    final String projectId = const Uuid().v4();
-
-    // Save project to Hive
-    final project = Project(
-      id: projectId,
-      name: title,
-      location: location,
-      createdAt: DateTime.now(),
-      userId: AuthService.currentUser?.uid ?? '',
-    );
-    await ProjectRepository.saveProject(project);
-
-    if (!mounted) return;
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => InspectionScreen(
-          projectId: projectId,
-          projectTitle: title,
-          location: location,
-        ),
-      ),
-    );
-  }
 
   Future<void> _startBatchMode() async {
     final title = _titleController.text.trim();
@@ -285,6 +249,13 @@ class _ProjectSetupScreenState extends State<ProjectSetupScreen> {
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: Color(0xFF2D5096), width: 1)),
           ),
         ),
+        if (label == "Geographic Location") ...[
+          const SizedBox(height: 8),
+          Text(
+            "Use the technical highlight marker for precision pings.",
+            style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 13, fontStyle: FontStyle.italic),
+          ),
+        ],
       ],
     );
   }

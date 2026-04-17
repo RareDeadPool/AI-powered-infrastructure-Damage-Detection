@@ -57,6 +57,13 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.12
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/brand/logo.png"
+  min_sdk_size: 21
 
 flutter:
   uses-material-design: true

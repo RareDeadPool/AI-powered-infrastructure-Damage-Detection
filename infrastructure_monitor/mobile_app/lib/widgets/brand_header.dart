@@ -112,7 +112,12 @@ class BrandHeader extends StatelessWidget {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: const Color(0xFFEEF2F6),
-                  child: const Icon(Icons.person_rounded, color: Color(0xFF7B8EA7), size: 24),
+                  backgroundImage: AuthService.currentUser?.photoURL != null 
+                    ? NetworkImage(AuthService.currentUser!.photoURL!) 
+                    : null,
+                  child: AuthService.currentUser?.photoURL == null 
+                    ? const Icon(Icons.person_rounded, color: Color(0xFF7B8EA7), size: 24)
+                    : null,
                 ),
               ],
             ),
